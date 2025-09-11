@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Upload, FileCode } from 'lucide-react';
+import { Upload, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface UploadInterfaceProps {
@@ -37,47 +37,45 @@ export const UploadInterface = ({ onScanComplete }: UploadInterfaceProps) => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white">
       {/* Header */}
-      <div className="border-b border-border">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center space-x-3">
-            <div className="text-2xl font-bold text-foreground">NEPERIA</div>
-            <div className="text-sm text-muted-foreground">Code Guardian</div>
-          </div>
+      <div className="px-8 py-6">
+        <div className="flex items-baseline space-x-2">
+          <div className="text-lg font-semibold text-gray-900">NEPERIA</div>
+          <div className="text-sm text-gray-500">Code Guardian</div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-6 py-16">
-        <div className="text-center space-y-8">
+      <div className="flex flex-col items-center justify-center" style={{ height: 'calc(100vh - 200px)' }}>
+        <div className="w-full max-w-lg">
           {/* Upload Area */}
           <div 
-            className={`border-2 border-dashed rounded-lg p-16 transition-colors ${
+            className={`border-2 border-dashed rounded-lg p-20 transition-colors ${
               isDragOver 
-                ? 'border-accent bg-accent/5' 
-                : 'border-border bg-muted/30'
+                ? 'border-green-400 bg-green-50' 
+                : 'border-gray-300 hover:border-gray-400'
             }`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
-            <div className="flex flex-col items-center space-y-6">
-              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
-                <FileCode className="w-8 h-8 text-muted-foreground" />
+            <div className="flex flex-col items-center space-y-4">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                <FileText className="w-8 h-8 text-gray-400" />
               </div>
               
-              <div className="space-y-2">
-                <div className="text-lg font-medium text-foreground">
+              <div className="text-center">
+                <div className="text-base text-gray-900 mb-1">
                   Drag & drop a file or{' '}
                   <button 
                     onClick={handleFileSelect}
-                    className="text-accent hover:underline"
+                    className="text-green-600 underline hover:text-green-700"
                   >
                     click to browse
                   </button>
                 </div>
-                <div className="text-sm text-muted-foreground">
+                <div className="text-sm text-gray-500">
                   Upload your source code file for analysis
                 </div>
               </div>
@@ -85,10 +83,10 @@ export const UploadInterface = ({ onScanComplete }: UploadInterfaceProps) => {
           </div>
 
           {/* Scan Button */}
-          <div className="flex justify-end">
+          <div className="flex justify-end mt-8">
             <Button 
               onClick={handleScan}
-              className="bg-accent hover:bg-accent/90 text-accent-foreground px-8 py-2 rounded-lg"
+              className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-md text-sm font-medium"
             >
               <Upload className="w-4 h-4 mr-2" />
               Scan File
@@ -98,8 +96,8 @@ export const UploadInterface = ({ onScanComplete }: UploadInterfaceProps) => {
       </div>
 
       {/* Footer */}
-      <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2">
-        <div className="text-sm text-muted-foreground">
+      <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2">
+        <div className="text-sm text-gray-400">
           © 2025 Neperia. All rights reserved.
         </div>
       </div>
