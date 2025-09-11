@@ -47,6 +47,19 @@ async function scanFile(file) {
     const data = await response.json();
     console.log('✅ Scan successful, received data:', data);
     
+    // Debug the response structure
+    console.log('🔍 API Response Structure:');
+    console.log('- Type:', typeof data);
+    console.log('- Keys:', Object.keys(data));
+    console.log('- findings:', data.findings);
+    console.log('- findings type:', typeof data.findings);
+    console.log('- findings length:', data.findings?.length);
+    
+    if (data.findings && data.findings.length > 0) {
+      console.log('- First finding:', data.findings[0]);
+      console.log('- First finding keys:', Object.keys(data.findings[0]));
+    }
+    
     return {
       success: true,
       data: data
