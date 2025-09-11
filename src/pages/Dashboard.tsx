@@ -1,0 +1,234 @@
+import React, { useState } from "react";
+import { ScanResult } from "@/entities/ScanResult";
+import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
+import ScannerInterface from "../components/clean-scanner/ScannerInterface";
+import RiskOverviewCard from "../components/clean-scanner/RiskOverviewCard";
+import FindingsCard from "../components/clean-scanner/FindingsCard";
+import ExportSection from "../components/clean-scanner/ExportSection";
+import { AlertCircle } from "lucide-react";
+
+const API_BASE_URL = 'https://semgrep-backend-production.up.railway.app';
+
+/**
+ * Scan uploaded file by reading its content and sending to /scan-code endpoint
+ */
+async function scanFile(file) {
+  try {
+    console.log('📄 Reading file content:', { name: file.name, size: file.size });
+    
+    // Read file content as text
+    const code = await file.text();
+    
+    console.log('🚀 Sending to /scan-code endpoint with JSON payload');
+    
+    const response = await fetch(`${API_BASE_URL}/scan-code`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      mode: 'cors',
+      body: JSON.stringify({
+        code: code,
+        filename: file.name
+      })
+    });
+
+    console.log('📨 Response status:', response.status, response.statusText);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ Error response:', errorText);
+      throw new Error(`HTTP ${response.status}: ${errorText}`);
+    }
+
+    const data = await response.json();
+    console.log('✅ Scan successful, received data:', data);
+    
+    return {
+      success: true,
+      data: data
+    };
+  } catch (error) {
+    console.error('❌ Scan failed:', error);
+    
+    return {
+      success: false,
+      error: error.message || 'Code scanning failed',
+      details: {
+        originalError: error.message,
+        timestamp: new Date().toISOString()
+      }
+    };
+  }
+}
+
+export default function Dashboard() {
+    const [isLoading, setIsLoading] = useState(false);
+    const [scanResult, setScanResult] = useState(null);
+    const [error, setError] = useState(null);
+    const [progress, setProgress] = useState(0);
+
+    const handleScan = async (options) => {
+        setIsLoading(true);
+        setError(null);
+        setScanResult(null);
+        setProgress(0);
+
+        const progressInterval = setInterval(() => {
+            setProgress(prev => {
+                if (prev >= 95) {
+                    clearInterval(progressInterval);
+                    return prev;
+                }
+                return prev + 5;
+            });
+        }, 200);
+
+        try {
+            if (!options.file) {
+                throw new Error("No file selected for scanning.");
+            }
+
+            console.log('🔍 Starting scan for file:', options.file.name);
+            
+            const response = await scanFile(options.file);
+
+            if (response.success) {
+                console.log('📊 Setting scan result:', response.data);
+                
+                // Debug: Log findings data structure for verification
+                if (response.data.findings && response.data.findings.length > 0) {
+                    console.log('🔍 First finding structure:', response.data.findings[0]);
+                    
+                    // Check for missing or fallback data
+                    response.data.findings.forEach((finding, index) => {
+                        const issues = [];
+                        if (!finding.title && !finding.name && !finding.check_id) {
+                            issues.push('Missing specific vulnerability name');
+                        }
+                        if (!finding.cwe || !finding.cwe.description) {
+                            issues.push('Missing CWE details');
+                        }
+                        if (!finding.owasp || !finding.owasp.category) {
+                            issues.push('Missing OWASP classification');
+                        }
+                        if (!finding.cvss || (!finding.cvss.baseScore && !finding.cvss.adjustedScore)) {
+                            issues.push('Missing CVSS scores');
+                        }
+                        if (!finding.businessImpact) {
+                            issues.push('Missing business impact');
+                        }
+                        
+                        if (issues.length > 0) {
+                            console.warn(`🚨 Finding ${index + 1} missing data:`, issues, finding);
+                        }
+                    });
+                }
+                
+                setScanResult(response.data);
+                
+                // Save to database
+                await ScanResult.create({
+                    ...response.data,
+                    fileName: options.file.name,
+                });
+                
+                console.log('💾 Scan result saved to database');
+            } else {
+                throw new Error(response.error);
+            }
+
+        } catch (err) {
+            console.error('🚨 Scan process failed:', err);
+            setError(`Failed to complete scan: ${err.message}`);
+        } finally {
+            clearInterval(progressInterval);
+            setProgress(100);
+            setTimeout(() => setIsLoading(false), 500);
+        }
+    };
+
+    const hasResults = scanResult && !isLoading;
+
+    return (
+        <div className="min-h-screen bg-white text-[#374151]">
+            <style>{`
+                @import url('https://rsms.me/inter/inter.css');
+                html { font-family: 'Inter', sans-serif; }
+                .tabular-nums { font-variant-numeric: tabular-nums; }
+                .progress-bar {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 2px;
+                    z-index: 9999;
+                    background-color: transparent;
+                    transition: opacity 0.3s ease;
+                }
+                .progress-bar > div {
+                    background-color: #AFCB0E;
+                }
+            `}</style>
+
+            {isLoading && (
+                <div className="progress-bar">
+                    <Progress value={progress} className="w-full h-full" />
+                </div>
+            )}
+            
+            <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-12 py-12">
+                <div className="flex items-center justify-between mb-12">
+                    <div className="flex items-baseline gap-2">
+                        <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/fc56c3a44_image.png" alt="Neperia Logo" className="h-5 w-5 grayscale opacity-30" />
+                        <h1 className="text-lg font-semibold text-[#374151]">NEPERIA</h1>
+                        <span className="text-sm text-[#9CA3AF]">Code Guardian</span>
+                    </div>
+                     {hasResults && (
+                        <Button 
+                            onClick={() => setScanResult(null)}
+                            variant="ghost"
+                            className="text-sm font-medium text-[#6B7280] hover:text-[#AFCB0E] hover:bg-[#F9FAFB] transition-colors duration-150">
+                            Scan another file
+                        </Button>
+                     )}
+                </div>
+
+                <main className="space-y-8">
+                    {!hasResults && (
+                        <ScannerInterface onScan={handleScan} isLoading={isLoading} />
+                    )}
+
+                    {error && (
+                        <div className="bg-red-50 text-red-700 rounded-lg p-4 flex items-center gap-3">
+                            <AlertCircle className="w-5 h-5" />
+                            <p className="font-medium">{error}</p>
+                        </div>
+                    )}
+
+                    {hasResults && (
+                        <div className="space-y-8">
+                            <RiskOverviewCard
+                                riskAssessment={scanResult.riskAssessment}
+                                performance={scanResult.performance}
+                            />
+                            <FindingsCard
+                                findings={scanResult.findings || []}
+                            />
+                            <ExportSection 
+                                findings={scanResult.findings || []}
+                                riskAssessment={scanResult.riskAssessment || {}}
+                            />
+                        </div>
+                    )}
+                </main>
+
+                <footer className="text-center mt-16">
+                  <p className="text-sm text-[#9CA3AF]">© 2025 Neperia. All rights reserved.</p>
+                </footer>
+            </div>
+        </div>
+    );
+}

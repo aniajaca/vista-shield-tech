@@ -1,27 +1,7 @@
-import { useState } from 'react';
-import { UploadInterface } from '@/components/UploadInterface';
-import { ResultsView } from '@/components/ResultsView';
+import Dashboard from './Dashboard';
 
 const Index = () => {
-  const [showResults, setShowResults] = useState(false);
-
-  const handleScanComplete = () => {
-    setShowResults(true);
-  };
-
-  const handleScanAnother = () => {
-    setShowResults(false);
-  };
-
-  return (
-    <>
-      {showResults ? (
-        <ResultsView onScanAnother={handleScanAnother} />
-      ) : (
-        <UploadInterface onScanComplete={handleScanComplete} />
-      )}
-    </>
-  );
+  return <Dashboard />;
 };
 
 export default Index;
