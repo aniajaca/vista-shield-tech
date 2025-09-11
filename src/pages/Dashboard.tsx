@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ScanResult } from "@/entities/ScanResult";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import RiskOverviewCard from "../components/clean-scanner/RiskOverviewCard";
 import FindingsCard from "../components/clean-scanner/FindingsCard";
 import ExportSection from "../components/clean-scanner/ExportSection";
 import { AlertCircle } from "lucide-react";
+import { runConnectionTest } from "@/utils/testConnection";
 
 const API_BASE_URL = 'https://semgrep-backend-production.up.railway.app';
 
@@ -69,6 +70,18 @@ export default function Dashboard() {
     const [scanResult, setScanResult] = useState(null);
     const [error, setError] = useState(null);
     const [progress, setProgress] = useState(0);
+    const [backendStatus, setBackendStatus] = useState('checking');
+
+    // Test backend connection on component mount
+    useEffect(() => {
+        const testBackend = async () => {
+            console.log('🔍 Testing backend connection...');
+            const isConnected = await runConnectionTest();
+            setBackendStatus(isConnected ? 'connected' : 'disconnected');
+        };
+        
+        testBackend();
+    }, []);
 
     const handleScan = async (options) => {
         setIsLoading(true);
@@ -185,6 +198,15 @@ export default function Dashboard() {
                         <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/fc56c3a44_image.png" alt="Neperia Logo" className="h-5 w-5 grayscale opacity-30" />
                         <h1 className="text-lg font-semibold text-[#374151]">NEPERIA</h1>
                         <span className="text-sm text-[#9CA3AF]">Code Guardian</span>
+                        <div className={`ml-4 px-2 py-1 rounded-full text-xs font-medium ${
+                            backendStatus === 'connected' ? 'bg-green-100 text-green-700' :
+                            backendStatus === 'disconnected' ? 'bg-red-100 text-red-700' :
+                            'bg-yellow-100 text-yellow-700'
+                        }`}>
+                            {backendStatus === 'connected' ? '● Backend Online' : 
+                             backendStatus === 'disconnected' ? '● Backend Offline' : 
+                             '● Checking...'}
+                        </div>
                     </div>
                      {hasResults && (
                         <Button 
