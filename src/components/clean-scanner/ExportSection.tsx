@@ -93,7 +93,7 @@ export default function ExportSection({ findings = [], riskAssessment = {} }: Ex
             }).join('')}
           `;
       } else {
-          // EXECUTIVE PDF REPORT
+          // COMPREHENSIVE PDF REPORT WITH ALL SCAN INFORMATION
           reportContent = `
             <h2>Executive Summary</h2>
             <div class="meta">
@@ -106,12 +106,44 @@ export default function ExportSection({ findings = [], riskAssessment = {} }: Ex
             </div>
             
             <h2>Findings by Severity</h2>
-            <div style="display: flex; gap: 16px;">
+            <div style="display: flex; gap: 16px; margin-bottom: 32px;">
                 <div class="meta-item"><span class="meta-label">Critical</span><span class="meta-value">${findings.filter(f => f.severity === 'Critical').length}</span></div>
                 <div class="meta-item"><span class="meta-label">High</span><span class="meta-value">${findings.filter(f => f.severity === 'High').length}</span></div>
                 <div class="meta-item"><span class="meta-label">Medium</span><span class="meta-value">${findings.filter(f => f.severity === 'Medium').length}</span></div>
                 <div class="meta-item"><span class="meta-label">Low</span><span class="meta-value">${findings.filter(f => f.severity === 'Low').length}</span></div>
             </div>
+            
+            <h2>Detailed Security Findings</h2>
+            ${findings.map((finding, index) => {
+              const { severity = 'Medium', title, message, description, cwe, owasp, cvss, location, code, remediation } = finding;
+              const { file, line } = location || {};
+              const cweDisplayId = cwe?.id ? (String(cwe.id).startsWith('CWE-') ? cwe.id : `CWE-${cwe.id}`) : 'N/A';
+              
+              return `
+                <div class="finding">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <h3>${index + 1}. ${title || message}</h3>
+                        <span class="pill pill-${severity.toLowerCase()}">${severity}</span>
+                    </div>
+                    <div style="font-size: 12px; color: #6B7280; font-family: 'Monaco', monospace; margin-top: 4px;">${file || 'N/A'}:${line || 'N/A'}</div>
+                    <p style="margin-top: 16px;">${description || message}</p>
+                    
+                    ${code ? `
+                    <h4 style="font-size: 12px; color: #6B7280; margin-top: 16px; font-weight: 500;">Vulnerable Code</h4>
+                    <div class="code">${code.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
+                    ` : ''}
+
+                    <h4 style="font-size: 12px; color: #6B7280; margin-top: 16px; font-weight: 500;">Remediation</h4>
+                    <p>${remediation?.strategy || remediation || 'Review and apply security best practices.'}</p>
+                    
+                    <div style="border-top: 1px solid #E5E7EB; margin-top: 24px; padding-top: 16px; display: flex; gap: 32px; font-size: 14px; flex-wrap: wrap;">
+                        ${cweDisplayId !== 'N/A' ? `<div><strong>CWE:</strong> ${cweDisplayId}${cwe?.name ? ` - ${cwe.name}` : ''}</div>` : ''}
+                        ${owasp ? `<div><strong>OWASP:</strong> ${owasp.category}</div>` : ''}
+                        ${cvss?.baseScore ? `<div><strong>CVSS:</strong> ${cvss.baseScore.toFixed(1)}</div>` : ''}
+                    </div>
+                </div>
+              `;
+            }).join('')}
           `;
       }
       
