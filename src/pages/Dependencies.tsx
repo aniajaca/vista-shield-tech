@@ -32,6 +32,16 @@ async function scanDependencies(packageJsonContent: string, packageLockContent?:
       }
     }
     
+    // Debug before sending to backend
+    console.log('➡️ About to send packageJson:', packageJsonObj);
+    console.log('➡️ Dependencies:', packageJsonObj?.dependencies);
+    console.log('➡️ DevDependencies:', packageJsonObj?.devDependencies);
+    try {
+      const sampleDeps = Object.entries(packageJsonObj?.dependencies || {}).slice(0, 3);
+      console.log('➡️ Dependencies sample:', sampleDeps);
+    } catch (e) {
+      console.warn('⚠️ Could not iterate dependencies:', e);
+    }
     const response = await fetch(`${API_BASE_URL}/scan-dependencies`, {
       method: 'POST',
       headers: {
@@ -115,13 +125,32 @@ export default function Dependencies() {
 
             console.log('🔍 Starting dependencies scan');
             
-            const response = await scanDependencies(options.packageJson, options.packageLock);
+            const resp = await scanDependencies(options.packageJson, options.packageLock);
 
-            if (response.success) {
-                console.log('📊 Setting dependencies scan result:', response.data);
-                setScanResult(response.data);
+            if (resp.success) {
+                // Normalize fields to ensure UI renders even if backend uses different keys
+                const normalized = {
+                    ...resp.data,
+                    vulnerabilities: Array.isArray(resp.data?.vulnerabilities)
+                        ? resp.data.vulnerabilities.map((v: any) => ({
+                              ...v,
+                              package: v.package || v.name || v.module || v.library,
+                              current_version: v.current_version || v.version || v.installed_version || v.found_version || v.package_version,
+                              affected_ranges: v.affected_ranges || v.vulnerable_versions || v.affected_versions,
+                              advisory_url: v.advisory_url || v.url || v.reference || v.advisory,
+                          }))
+                        : [],
+                    risk_level: resp.data?.risk_level || (resp.data as any)?.riskLevel || (resp.data as any)?.risk || 'N/A',
+                    stats: resp.data?.stats || (resp.data as any)?.severity_counts || (resp.data as any)?.summary || {},
+                };
+                console.log('📊 Setting dependencies scan result (normalized):', {
+                    risk_level: normalized.risk_level,
+                    stats: normalized.stats,
+                    sample: normalized.vulnerabilities?.[0]
+                });
+                setScanResult(normalized);
             } else {
-                throw new Error(response.error);
+                throw new Error(resp.error);
             }
 
         } catch (err) {
