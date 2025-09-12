@@ -14,6 +14,24 @@ async function scanDependencies(packageJsonContent: string, packageLockContent?:
   try {
     console.log('📦 Scanning dependencies...');
     
+    // Parse JSON strings into objects as expected by backend
+    let packageJsonObj;
+    let packageLockObj = null;
+    
+    try {
+      packageJsonObj = JSON.parse(packageJsonContent);
+    } catch (error) {
+      throw new Error('Invalid package.json format: ' + error.message);
+    }
+    
+    if (packageLockContent) {
+      try {
+        packageLockObj = JSON.parse(packageLockContent);
+      } catch (error) {
+        throw new Error('Invalid package-lock.json format: ' + error.message);
+      }
+    }
+    
     const response = await fetch(`${API_BASE_URL}/scan-dependencies`, {
       method: 'POST',
       headers: {
@@ -22,8 +40,8 @@ async function scanDependencies(packageJsonContent: string, packageLockContent?:
       },
       mode: 'cors',
       body: JSON.stringify({
-        packageJson: packageJsonContent,
-        packageLockJson: packageLockContent || null
+        packageJson: packageJsonObj,
+        packageLockJson: packageLockObj
       })
     });
 
