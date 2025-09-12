@@ -8,9 +8,11 @@ interface RiskAssessment {
 interface ExportSectionProps {
     findings?: any[];
     riskAssessment?: RiskAssessment;
+    performance?: { scanTime?: number; rulesExecuted?: number };
+    metadata?: any;
 }
 
-export default function ExportSection({ findings = [], riskAssessment = {} }: ExportSectionProps) {
+export default function ExportSection({ findings = [], riskAssessment = {}, performance = {}, metadata = {} }: ExportSectionProps) {
   const { riskScore = 0, riskLevel = 'N/A' } = riskAssessment;
 
   const downloadReport = (format) => {
@@ -37,6 +39,24 @@ export default function ExportSection({ findings = [], riskAssessment = {} }: Ex
         .meta-value { font-size: 18px; font-weight: 600; }
     `;
     
+    // Helpers
+    const normalizeSeverity = (sev: any) => {
+      if (!sev) return 'Low';
+      const s = String(sev).toLowerCase();
+      if (['critical', 'crit', 'error', 'severe'].includes(s)) return 'Critical';
+      if (['high', 'major'].includes(s)) return 'High';
+      if (['medium', 'moderate', 'warn', 'warning'].includes(s)) return 'Medium';
+      if (['low', 'minor', 'info', 'informational'].includes(s)) return 'Low';
+      // Fallback: capitalize first letter
+      return s ? s.charAt(0).toUpperCase() + s.slice(1) : 'Low';
+    };
+
+    const sevCount = (level: 'Critical' | 'High' | 'Medium' | 'Low') =>
+      findings.filter((f) => normalizeSeverity(f?.severity) === level).length;
+
+    const escapeHTML = (str: any) =>
+      typeof str === 'string' ? str.replace(/</g, '&lt;').replace(/>/g, '&gt;') : str;
+
     if (format === 'json') {
         const jsonReport = {
           riskAssessment,
@@ -107,15 +127,16 @@ export default function ExportSection({ findings = [], riskAssessment = {} }: Ex
             
             <h2>Findings by Severity</h2>
             <div style="display: flex; gap: 16px; margin-bottom: 32px;">
-                <div class="meta-item"><span class="meta-label">Critical</span><span class="meta-value">${findings.filter(f => f.severity === 'Critical').length}</span></div>
-                <div class="meta-item"><span class="meta-label">High</span><span class="meta-value">${findings.filter(f => f.severity === 'High').length}</span></div>
-                <div class="meta-item"><span class="meta-label">Medium</span><span class="meta-value">${findings.filter(f => f.severity === 'Medium').length}</span></div>
-                <div class="meta-item"><span class="meta-label">Low</span><span class="meta-value">${findings.filter(f => f.severity === 'Low').length}</span></div>
+                <div class="meta-item"><span class="meta-label">Critical</span><span class="meta-value">${sevCount('Critical')}</span></div>
+                <div class="meta-item"><span class="meta-label">High</span><span class="meta-value">${sevCount('High')}</span></div>
+                <div class="meta-item"><span class="meta-label">Medium</span><span class="meta-value">${sevCount('Medium')}</span></div>
+                <div class="meta-item"><span class="meta-label">Low</span><span class="meta-value">${sevCount('Low')}</span></div>
             </div>
             
             <h2>Detailed Security Findings</h2>
             ${findings.map((finding, index) => {
-              const { severity = 'Medium', title, message, description, cwe, owasp, cvss, location, code, remediation } = finding;
+              const { severity = 'Medium', title, message, description, cwe, owasp, cvss, location, code, extractedCode, codeSnippet: cs, extra, remediation } = finding;
+              const vulnCode = code || extractedCode || cs || (extra && extra.lines);
               const { file, line } = location || {};
               const cweDisplayId = cwe?.id ? (String(cwe.id).startsWith('CWE-') ? cwe.id : `CWE-${cwe.id}`) : 'N/A';
               
