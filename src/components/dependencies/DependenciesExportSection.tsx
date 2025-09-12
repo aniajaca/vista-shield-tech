@@ -90,16 +90,15 @@ export default function DependenciesExportSection({
                 reportContent = `
                     <h2>Detailed Dependency Vulnerabilities</h2>
                     ${vulnerabilities.map((vuln, index) => {
-                        const { 
-                            severity = 'Medium', 
-                            package: packageName, 
-                            current_version: currentVersion,
-                            title, 
-                            description, 
-                            affected_ranges: affectedRanges,
-                            recommendation,
-                            advisory_url: advisoryUrl
-                        } = vuln;
+                        const packageName = vuln.package || vuln.name || vuln.module || vuln.library;
+                        const currentVersion = vuln.current_version || vuln.version || vuln.installedVersion || vuln.vulnerability?.installedVersion || vuln.found_version || vuln.package_version;
+                        const cve = vuln.cve || vuln.vulnerability?.cve || vuln.vulnerability?.id;
+                        const severity = (vuln.severity || vuln.vulnerability?.severity || 'Medium');
+                        const title = vuln.title || cve || vuln.vulnerability?.title || 'Advisory';
+                        const description = vuln.description || vuln.vulnerability?.description || vuln.summary || '';
+                        const affectedRanges = vuln.affected_ranges || vuln.vulnerable_versions || vuln.vulnerability?.affected_versions || vuln.vulnerability?.affected_ranges;
+                        const recommendation = vuln.recommendation || vuln.remediation || vuln.vulnerability?.remediation || vuln.fix || 'Update to a secure version';
+                        const advisoryUrl = vuln.advisory_url || vuln.vulnerability?.advisory_url || vuln.url || vuln.reference || vuln.vulnerability?.url;
                         
                         return `
                             <div class="finding">
@@ -154,16 +153,15 @@ export default function DependenciesExportSection({
                     
                     <h2>Detailed Dependency Vulnerabilities</h2>
                     ${vulnerabilities.map((vuln, index) => {
-                        const { 
-                            severity = 'Medium', 
-                            package: packageName, 
-                            current_version: currentVersion,
-                            title, 
-                            description, 
-                            affected_ranges: affectedRanges,
-                            recommendation,
-                            advisory_url: advisoryUrl
-                        } = vuln;
+                        const packageName = vuln.package || vuln.name || vuln.module || vuln.library;
+                        const currentVersion = vuln.current_version || vuln.version || vuln.installedVersion || vuln.vulnerability?.installedVersion || vuln.found_version || vuln.package_version;
+                        const cve = vuln.cve || vuln.vulnerability?.cve || vuln.vulnerability?.id;
+                        const severity = (vuln.severity || vuln.vulnerability?.severity || 'Medium');
+                        const title = vuln.title || cve || vuln.vulnerability?.title || 'Advisory';
+                        const description = vuln.description || vuln.vulnerability?.description || vuln.summary || '';
+                        const affectedRanges = vuln.affected_ranges || vuln.vulnerable_versions || vuln.vulnerability?.affected_versions || vuln.vulnerability?.affected_ranges;
+                        const recommendation = vuln.recommendation || vuln.remediation || vuln.vulnerability?.remediation || vuln.fix || 'Update to a secure version';
+                        const advisoryUrl = vuln.advisory_url || vuln.vulnerability?.advisory_url || vuln.url || vuln.reference || vuln.vulnerability?.url;
                         
                         return `
                             <div class="finding">

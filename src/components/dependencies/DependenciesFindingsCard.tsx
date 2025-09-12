@@ -30,18 +30,17 @@ const InfoBlock = ({ title, children }) => (
 const VulnerabilityItem = ({ vulnerability }) => {
     const [isOpen, setIsOpen] = useState(false);
     
-    const {
-        package: packageName,
-        current_version: currentVersion,
-        severity = 'Medium',
-        title,
-        description,
-        affected_ranges: affectedRanges,
-        recommendation,
-        advisory_url: advisoryUrl
-    } = vulnerability;
+    const packageName = vulnerability.package || vulnerability.name || vulnerability.module || vulnerability.library;
+    const currentVersion = vulnerability.current_version || vulnerability.version || vulnerability.installedVersion || vulnerability.vulnerability?.installedVersion || vulnerability.found_version || vulnerability.package_version;
+    const cve = vulnerability.cve || vulnerability.vulnerability?.cve || vulnerability.vulnerability?.id;
+    const severity = (vulnerability.severity || vulnerability.vulnerability?.severity || 'Medium');
+    const title = vulnerability.title || cve || vulnerability.vulnerability?.title || 'Advisory';
+    const description = vulnerability.description || vulnerability.vulnerability?.description || vulnerability.summary || '';
+    const affectedRanges = vulnerability.affected_ranges || vulnerability.vulnerable_versions || vulnerability.vulnerability?.affected_versions || vulnerability.vulnerability?.affected_ranges;
+    const recommendation = vulnerability.recommendation || vulnerability.remediation || vulnerability.vulnerability?.remediation || vulnerability.fix || 'Update to a secure version';
+    const advisoryUrl = vulnerability.advisory_url || vulnerability.vulnerability?.advisory_url || vulnerability.url || vulnerability.reference || vulnerability.vulnerability?.url;
 
-    const displayTitle = `${packageName}@${currentVersion} — ${title}`;
+    const displayTitle = `${packageName || 'Unknown'}@${currentVersion || 'unknown'} — ${title || 'Advisory'}`;
 
     return (
         <div className={`bg-white rounded-xl transition-all duration-150 ${isOpen ? 'shadow-[0_4px_12px_rgba(0,0,0,0.08)]' : 'shadow-[0_1px_3px_rgba(0,0,0,0.05)]'}`}>
@@ -67,6 +66,9 @@ const VulnerabilityItem = ({ vulnerability }) => {
                 <div className="px-6 pb-6 border-t border-[#F3F4F6]">
                    <div className="pt-6 grid grid-cols-1 md:grid-cols-3 gap-8">
                         <div className="md:col-span-1 space-y-6">
+                            <InfoBlock title="CVE">
+                                <p><span className="font-semibold">{cve || 'N/A'}</span></p>
+                            </InfoBlock>
                             <InfoBlock title="Affected Versions">
                                 <p><span className="font-semibold">{affectedRanges || 'N/A'}</span></p>
                             </InfoBlock>
@@ -105,14 +107,13 @@ export default function DependenciesFindingsCard({ vulnerabilities = [] }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [severityFilter, setSeverityFilter] = useState('all');
 
-    const filteredVulns = vulnerabilities.filter(vuln => {
-        const matchesSearch = searchTerm === '' || 
-            vuln.package?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            vuln.title?.toLowerCase().includes(searchTerm.toLowerCase());
-        
-        const matchesSeverity = severityFilter === 'all' || 
-            vuln.severity?.toLowerCase() === severityFilter.toLowerCase();
-        
+    const filteredVulns = vulnerabilities.filter((v: any) => {
+        const term = searchTerm.toLowerCase();
+        const pkg = String(v?.package || v?.name || v?.module || v?.library || '').toLowerCase();
+        const title = String(v?.title || v?.vulnerability?.cve || v?.vulnerability?.title || '').toLowerCase();
+        const matchesSearch = term === '' || pkg.includes(term) || title.includes(term);
+        const sev = String(v?.severity || v?.vulnerability?.severity || '').toLowerCase();
+        const matchesSeverity = severityFilter === 'all' || sev === severityFilter.toLowerCase();
         return matchesSearch && matchesSeverity;
     });
 
@@ -126,11 +127,11 @@ export default function DependenciesFindingsCard({ vulnerabilities = [] }) {
     }
 
     // Severity counts for summary
-    const severityCounts = vulnerabilities.reduce((acc, vuln) => {
-        const sev = vuln.severity?.toLowerCase() || 'low';
+    const severityCounts = vulnerabilities.reduce((acc: Record<string, number>, v: any) => {
+        const sev = String(v?.severity || v?.vulnerability?.severity || 'low').toLowerCase();
         acc[sev] = (acc[sev] || 0) + 1;
         return acc;
-    }, {});
+    }, {} as Record<string, number>);
 
     return (
         <div className="space-y-6">

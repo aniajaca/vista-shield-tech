@@ -128,27 +128,8 @@ export default function Dependencies() {
             const resp = await scanDependencies(options.packageJson, options.packageLock);
 
             if (resp.success) {
-                // Normalize fields to ensure UI renders even if backend uses different keys
-                const normalized = {
-                    ...resp.data,
-                    vulnerabilities: Array.isArray(resp.data?.vulnerabilities)
-                        ? resp.data.vulnerabilities.map((v: any) => ({
-                              ...v,
-                              package: v.package || v.name || v.module || v.library,
-                              current_version: v.current_version || v.version || v.installed_version || v.found_version || v.package_version,
-                              affected_ranges: v.affected_ranges || v.vulnerable_versions || v.affected_versions,
-                              advisory_url: v.advisory_url || v.url || v.reference || v.advisory,
-                          }))
-                        : [],
-                    risk_level: resp.data?.risk_level || (resp.data as any)?.riskLevel || (resp.data as any)?.risk || 'N/A',
-                    stats: resp.data?.stats || (resp.data as any)?.severity_counts || (resp.data as any)?.summary || {},
-                };
-                console.log('📊 Setting dependencies scan result (normalized):', {
-                    risk_level: normalized.risk_level,
-                    stats: normalized.stats,
-                    sample: normalized.vulnerabilities?.[0]
-                });
-                setScanResult(normalized);
+                console.log('📊 Setting dependencies scan result (raw):', resp.data);
+                setScanResult(resp.data);
             } else {
                 throw new Error(resp.error);
             }
