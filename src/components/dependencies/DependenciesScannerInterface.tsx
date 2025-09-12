@@ -3,7 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Upload, ScanLine, Loader2, FileUp, X } from 'lucide-react';
 import { Textarea } from "@/components/ui/textarea";
 
-export default function DependenciesScannerInterface({ onScan, isLoading }) {
+interface DependenciesScannerInterfaceProps {
+    onScan: (options: { packageJson: string; packageLock?: string }) => void;
+    isLoading: boolean;
+}
+
+export default function DependenciesScannerInterface({ onScan, isLoading }: DependenciesScannerInterfaceProps) {
     const [packageJson, setPackageJson] = useState({ content: '', filename: '', mode: 'file' }); // 'file' or 'paste'
     const [packageLock, setPackageLock] = useState({ content: '', filename: '', mode: 'file' });
     const [isDragging, setIsDragging] = useState(false);
