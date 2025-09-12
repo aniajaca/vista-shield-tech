@@ -1,29 +1,20 @@
 import React, { useState, useEffect } from "react";
-import { ScanResult } from "@/entities/ScanResult";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import ScannerInterface from "../components/clean-scanner/ScannerInterface";
-import RiskOverviewCard from "../components/clean-scanner/RiskOverviewCard";
-import FindingsCard from "../components/clean-scanner/FindingsCard";
-import ExportSection from "../components/clean-scanner/ExportSection";
+import DependenciesScannerInterface from "../components/dependencies/DependenciesScannerInterface";
+import DependenciesRiskOverviewCard from "../components/dependencies/DependenciesRiskOverviewCard";
+import DependenciesFindingsCard from "../components/dependencies/DependenciesFindingsCard";
+import DependenciesExportSection from "../components/dependencies/DependenciesExportSection";
 import { AlertCircle } from "lucide-react";
 import { runConnectionTest } from "@/utils/testConnection";
 
 const API_BASE_URL = 'https://semgrep-backend-production.up.railway.app';
 
-/**
- * Scan uploaded file by reading its content and sending to /scan-code endpoint
- */
-async function scanFile(file) {
+async function scanDependencies(packageJsonContent: string, packageLockContent?: string) {
   try {
-    console.log('📄 Reading file content:', { name: file.name, size: file.size });
+    console.log('📦 Scanning dependencies...');
     
-    // Read file content as text
-    const code = await file.text();
-    
-    console.log('🚀 Sending to /scan-code endpoint with JSON payload');
-    
-    const response = await fetch(`${API_BASE_URL}/scan-code`, {
+    const response = await fetch(`${API_BASE_URL}/scan-dependencies`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -31,8 +22,8 @@ async function scanFile(file) {
       },
       mode: 'cors',
       body: JSON.stringify({
-        code: code,
-        filename: file.name
+        packageJson: packageJsonContent,
+        packageLockJson: packageLockContent || null
       })
     });
 
@@ -45,31 +36,18 @@ async function scanFile(file) {
     }
 
     const data = await response.json();
-    console.log('✅ Scan successful, received data:', data);
-    
-    // Debug the response structure
-    console.log('🔍 API Response Structure:');
-    console.log('- Type:', typeof data);
-    console.log('- Keys:', Object.keys(data));
-    console.log('- findings:', data.findings);
-    console.log('- findings type:', typeof data.findings);
-    console.log('- findings length:', data.findings?.length);
-    
-    if (data.findings && data.findings.length > 0) {
-      console.log('- First finding:', data.findings[0]);
-      console.log('- First finding keys:', Object.keys(data.findings[0]));
-    }
+    console.log('✅ Dependencies scan successful:', data);
     
     return {
       success: true,
       data: data
     };
   } catch (error) {
-    console.error('❌ Scan failed:', error);
+    console.error('❌ Dependencies scan failed:', error);
     
     return {
       success: false,
-      error: error.message || 'Code scanning failed',
+      error: error.message || 'Dependencies scanning failed',
       details: {
         originalError: error.message,
         timestamp: new Date().toISOString()
@@ -78,7 +56,7 @@ async function scanFile(file) {
   }
 }
 
-export default function Dashboard() {
+export default function Dependencies() {
     const [isLoading, setIsLoading] = useState(false);
     const [scanResult, setScanResult] = useState(null);
     const [error, setError] = useState(null);
@@ -96,7 +74,7 @@ export default function Dashboard() {
         testBackend();
     }, []);
 
-    const handleScan = async (options) => {
+    const handleScan = async (options: { packageJson: string; packageLock?: string }) => {
         setIsLoading(true);
         setError(null);
         setScanResult(null);
@@ -113,62 +91,24 @@ export default function Dashboard() {
         }, 200);
 
         try {
-            if (!options.file) {
-                throw new Error("No file selected for scanning.");
+            if (!options.packageJson) {
+                throw new Error("No package.json content provided for scanning.");
             }
 
-            console.log('🔍 Starting scan for file:', options.file.name);
+            console.log('🔍 Starting dependencies scan');
             
-            const response = await scanFile(options.file);
+            const response = await scanDependencies(options.packageJson, options.packageLock);
 
             if (response.success) {
-                console.log('📊 Setting scan result:', response.data);
-                
-                // Debug: Log findings data structure for verification
-                if (response.data.findings && response.data.findings.length > 0) {
-                    console.log('🔍 First finding structure:', response.data.findings[0]);
-                    
-                    // Check for missing or fallback data
-                    response.data.findings.forEach((finding, index) => {
-                        const issues = [];
-                        if (!finding.title && !finding.name && !finding.check_id) {
-                            issues.push('Missing specific vulnerability name');
-                        }
-                        if (!finding.cwe || !finding.cwe.description) {
-                            issues.push('Missing CWE details');
-                        }
-                        if (!finding.owasp || !finding.owasp.category) {
-                            issues.push('Missing OWASP classification');
-                        }
-                        if (!finding.cvss || (!finding.cvss.baseScore && !finding.cvss.adjustedScore)) {
-                            issues.push('Missing CVSS scores');
-                        }
-                        if (!finding.businessImpact) {
-                            issues.push('Missing business impact');
-                        }
-                        
-                        if (issues.length > 0) {
-                            console.warn(`🚨 Finding ${index + 1} missing data:`, issues, finding);
-                        }
-                    });
-                }
-                
+                console.log('📊 Setting dependencies scan result:', response.data);
                 setScanResult(response.data);
-                
-                // Save to database
-                await ScanResult.create({
-                    ...response.data,
-                    fileName: options.file.name,
-                });
-                
-                console.log('💾 Scan result saved to database');
             } else {
                 throw new Error(response.error);
             }
 
         } catch (err) {
-            console.error('🚨 Scan process failed:', err);
-            setError(`Failed to complete scan: ${err.message}`);
+            console.error('🚨 Dependencies scan process failed:', err);
+            setError(`Failed to complete dependencies scan: ${err.message}`);
         } finally {
             clearInterval(progressInterval);
             setProgress(100);
@@ -206,12 +146,11 @@ export default function Dashboard() {
             )}
             
             <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-12 py-12">
-            
                 <div className="flex items-center justify-between mb-12">
                     <div className="flex items-baseline gap-2">
                         <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/fc56c3a44_image.png" alt="Neperia Logo" className="h-5 w-5 grayscale opacity-30" />
                         <h1 className="text-lg font-semibold text-[#374151]">NEPERIA</h1>
-                        <span className="text-sm text-[#9CA3AF]">Code Guardian</span>
+                        <span className="text-sm text-[#9CA3AF]">Dependencies Scanner</span>
                         <div className={`ml-4 px-2 py-1 rounded-full text-xs font-medium ${
                             backendStatus === 'connected' ? 'bg-green-100 text-green-700' :
                             backendStatus === 'disconnected' ? 'bg-red-100 text-red-700' :
@@ -227,14 +166,14 @@ export default function Dashboard() {
                             onClick={() => setScanResult(null)}
                             variant="ghost"
                             className="text-sm font-medium text-[#6B7280] hover:text-[#AFCB0E] hover:bg-[#F9FAFB] transition-colors duration-150">
-                            Scan another file
+                            Scan other dependencies
                         </Button>
                      )}
                 </div>
 
                 <main className="space-y-8">
                     {!hasResults && (
-                        <ScannerInterface onScan={handleScan} isLoading={isLoading} />
+                        <DependenciesScannerInterface onScan={handleScan} isLoading={isLoading} />
                     )}
 
                     {error && (
@@ -246,25 +185,42 @@ export default function Dashboard() {
 
                     {hasResults && (
                         <div className="space-y-8">
-                            <RiskOverviewCard
-                                riskAssessment={scanResult.riskAssessment}
-                                performance={scanResult.performance}
+                            <DependenciesRiskOverviewCard
+                                riskAssessment={{
+                                    riskScore: scanResult.risk_score || 0,
+                                    riskLevel: scanResult.risk_level || 'Low',
+                                    findingsBreakdown: scanResult.stats || {}
+                                }}
+                                performance={{
+                                    scanTime: scanResult.scan_time,
+                                    packagesScanned: scanResult.packages_scanned,
+                                    dataSources: scanResult.data_sources,
+                                    rulesExecuted: scanResult.rules_applied
+                                }}
                             />
-                            <FindingsCard
-                                findings={scanResult.findings || []}
+                            <DependenciesFindingsCard
+                                vulnerabilities={scanResult.vulnerabilities || []}
                             />
-                            <ExportSection 
-                                findings={scanResult.findings || []}
-                                riskAssessment={scanResult.riskAssessment || {}}
+                            <DependenciesExportSection 
+                                vulnerabilities={scanResult.vulnerabilities || []}
+                                riskAssessment={{
+                                    riskScore: scanResult.risk_score || 0,
+                                    riskLevel: scanResult.risk_level || 'Low'
+                                }}
+                                performance={{
+                                    scanTime: scanResult.scan_time,
+                                    packagesScanned: scanResult.packages_scanned,
+                                    dataSources: scanResult.data_sources
+                                }}
                             />
                         </div>
                     )}
-                 </main>
+                </main>
 
-                 <footer className="text-center mt-16">
-                   <p className="text-sm text-[#9CA3AF]">© 2025 Neperia. All rights reserved.</p>
-                 </footer>
-             </div>
+                <footer className="text-center mt-16">
+                  <p className="text-sm text-[#9CA3AF]">© 2025 Neperia. All rights reserved.</p>
+                </footer>
+            </div>
         </div>
     );
 }
