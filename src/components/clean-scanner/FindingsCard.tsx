@@ -1,6 +1,25 @@
 import React, { useState } from 'react';
 import { ChevronDown, MapPin, Lightbulb } from 'lucide-react';
 
+// Safe formatter to render possibly nested objects as readable text
+const toText = (val: any): string => {
+  if (val == null) return '';
+  const t = typeof val;
+  if (t === 'string' || t === 'number' || t === 'boolean') return String(val);
+  if (Array.isArray(val)) return val.map(toText).filter(Boolean).join('; ');
+  if (t === 'object') {
+    const preferred = ['strategy', 'fix', 'recommendation', 'text', 'message', 'summary', 'details', 'explanation', 'reason'];
+    for (const k of preferred) {
+      if (k in val && (val as any)[k] != null) return toText((val as any)[k]);
+    }
+    // Fallback: concatenate string-like fields
+    const parts = Object.values(val).map(toText).filter(Boolean);
+    if (parts.length) return parts.join(' ');
+    try { return JSON.stringify(val); } catch { return ''; }
+  }
+  return '';
+};
+
 const SeverityPill = ({ severity }) => {
     const s = severity?.toLowerCase() || 'info';
     const styles = {
@@ -39,16 +58,16 @@ const FindingItem = ({ finding }) => {
         code, extractedCode, codeSnippet, extra
     } = finding;
 
-    const title = rawTitle || name || check_id || message || "Security Vulnerability";
-    const description = cwe?.description || rawDesc || message || 'Security vulnerability detected';
-    const remediation = rawRemediation?.strategy || rawRemediation || 'Review and apply security best practices';
+    const title = toText(rawTitle || name || check_id || message) || "Security Vulnerability";
+    const description = toText(cwe?.description ?? rawDesc ?? message) || 'Security vulnerability detected';
+    const remediation = toText(rawRemediation) || 'Review and apply security best practices';
     
     const location = rawLocation || start;
     const filePath = location?.path || location?.file || finding.file || "Unknown file";
     const lineNumber = location?.line || location?.row;
     const locationStr = lineNumber ? `${filePath}:${lineNumber}` : filePath;
 
-    const vulnerableCode = code || extractedCode || codeSnippet || extra?.lines || '';
+    const vulnerableCode = toText(code ?? extractedCode ?? codeSnippet ?? extra?.lines) || '';
 
     const cweDisplayId = cwe?.id ? (String(cwe.id).startsWith('CWE-') ? cwe.id : `CWE-${cwe.id}`) : null;
 
@@ -88,11 +107,19 @@ const FindingItem = ({ finding }) => {
                             )}
                             {cvss && (cvss.baseScore || cvss.adjustedScore) && (
                                 <InfoBlock title="CVSS Score">
-                                    {cvss.baseScore && <p>Base: <span className="font-semibold tabular-nums">{cvss.baseScore.toFixed(1)}</span></p>}
-                                    {cvss.adjustedScore && cvss.adjustedScore !== cvss.baseScore && (
+                                    {typeof cvss.baseScore === 'number' && (
+                                        <p>Base: <span className="font-semibold tabular-nums">{cvss.baseScore.toFixed(1)}</span></p>
+                                    )}
+                                    {typeof cvss.baseScore !== 'number' && cvss.baseScore && (
+                                        <p>Base: <span className="font-semibold tabular-nums">{String(cvss.baseScore)}</span></p>
+                                    )}
+                                    {typeof cvss.adjustedScore === 'number' && cvss.adjustedScore !== cvss.baseScore && (
                                         <p>Adjusted: <span className="font-semibold tabular-nums text-orange-600">{cvss.adjustedScore.toFixed(1)}</span></p>
                                     )}
-                                    {cvss.vector && <p className="text-xs text-muted-foreground">Vector: {cvss.vector}</p>}
+                                    {typeof cvss.adjustedScore !== 'number' && cvss.adjustedScore && cvss.adjustedScore !== cvss.baseScore && (
+                                        <p>Adjusted: <span className="font-semibold tabular-nums text-orange-600">{String(cvss.adjustedScore)}</span></p>
+                                    )}
+                                    {cvss.vector && <p className="text-xs text-muted-foreground">Vector: {String(cvss.vector)}</p>}
                                 </InfoBlock>
                             )}
                             
