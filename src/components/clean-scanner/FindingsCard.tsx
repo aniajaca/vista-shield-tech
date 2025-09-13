@@ -29,154 +29,113 @@ const InfoBlock = ({ title, children }) => (
 const FindingItem = ({ finding }) => {
     const [isOpen, setIsOpen] = useState(false);
     
-    // Add error boundary and safe data extraction
-    try {
-        const {
-            title: rawTitle, name, check_id, message,
-            severity = 'Medium',
-            cwe, owasp, cvss,
-            description: rawDesc,
-            remediation: rawRemediation,
-            location: rawLocation, start,
-            code, extractedCode, codeSnippet, extra,
-            risk
-        } = finding || {};
+    const {
+        title: rawTitle, name, check_id, message,
+        severity = 'Medium',
+        cwe, owasp, cvss,
+        description: rawDesc,
+        remediation: rawRemediation,
+        location: rawLocation, start,
+        code, extractedCode, codeSnippet, extra
+    } = finding;
 
-        const title = rawTitle || name || check_id || message || "Security Vulnerability";
-        const description = cwe?.description || rawDesc || message || 'Security vulnerability detected';
-        const remediation = rawRemediation?.strategy || rawRemediation || 'Review and apply security best practices';
-        
-        const location = rawLocation || start;
-        const filePath = location?.path || location?.file || finding?.file || "Unknown file";
-        const lineNumber = location?.line || location?.row;
-        const locationStr = lineNumber ? `${filePath}:${lineNumber}` : filePath;
+    const title = rawTitle || name || check_id || message || "Security Vulnerability";
+    const description = cwe?.description || rawDesc || message || 'Security vulnerability detected';
+    const remediation = rawRemediation?.strategy || rawRemediation || 'Review and apply security best practices';
+    
+    const location = rawLocation || start;
+    const filePath = location?.path || location?.file || finding.file || "Unknown file";
+    const lineNumber = location?.line || location?.row;
+    const locationStr = lineNumber ? `${filePath}:${lineNumber}` : filePath;
 
-        const vulnerableCode = code || extractedCode || codeSnippet || extra?.lines || '';
+    const vulnerableCode = code || extractedCode || codeSnippet || extra?.lines || '';
 
-        const cweDisplayId = cwe?.id ? (String(cwe.id).startsWith('CWE-') ? cwe.id : `CWE-${cwe.id}`) : null;
+    const cweDisplayId = cwe?.id ? (String(cwe.id).startsWith('CWE-') ? cwe.id : `CWE-${cwe.id}`) : null;
 
-        // Log finding structure for debugging
-        console.log('🔍 Rendering finding:', {
-            title,
-            severity,
-            hasRisk: !!risk,
-            riskStructure: risk ? Object.keys(risk) : null,
-            hasCvss: !!cvss,
-            cvssStructure: cvss ? Object.keys(cvss) : null
-        });
-
-        return (
-            <div className={`bg-white rounded-xl transition-all duration-150 ${isOpen ? 'shadow-[0_4px_12px_rgba(0,0,0,0.08)]' : 'shadow-[0_1px_3px_rgba(0,0,0,0.05)]'}`}>
-                <button
-                    onClick={() => setIsOpen(!isOpen)}
-                    className="w-full hover:bg-[#F9FAFB] px-6 py-4 transition-colors duration-150 group rounded-t-xl"
-                >
-                    <div className="flex items-center justify-between w-full text-left">
-                        <div className="flex items-center gap-4">
-                            <SeverityPill severity={severity} />
-                            <span className="font-medium text-[#374151]">{title}</span>
-                        </div>
-                        <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-2 text-sm text-[#6B7280]">
-                                 <MapPin className="w-4 h-4" strokeWidth={1.5} />
-                                 <span className="font-mono text-xs">{locationStr}</span>
-                            </div>
-                            <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} strokeWidth={1.5} />
-                        </div>
+    return (
+        <div className={`bg-white rounded-xl transition-all duration-150 ${isOpen ? 'shadow-[0_4px_12px_rgba(0,0,0,0.08)]' : 'shadow-[0_1px_3px_rgba(0,0,0,0.05)]'}`}>
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="w-full hover:bg-[#F9FAFB] px-6 py-4 transition-colors duration-150 group rounded-t-xl"
+            >
+                <div className="flex items-center justify-between w-full text-left">
+                    <div className="flex items-center gap-4">
+                        <SeverityPill severity={severity} />
+                        <span className="font-medium text-[#374151]">{title}</span>
                     </div>
-                </button>
-                {isOpen && (
-                    <div className="px-6 pb-6 border-t border-[#F3F4F6]">
-                       <div className="pt-6 grid grid-cols-1 md:grid-cols-3 gap-8">
-                            <div className="md:col-span-1 space-y-6">
-                                {cweDisplayId && (
-                                    <InfoBlock title="CWE">
-                                        <p><span className="font-semibold">{cweDisplayId}</span>: {cwe?.name || 'Security Weakness'}</p>
-                                    </InfoBlock>
-                                )}
-                                {owasp && (
-                                    <InfoBlock title="OWASP">
-                                        <p><span className="font-semibold">{owasp.category}</span> – {owasp.title}</p>
-                                    </InfoBlock>
-                                )}
-                                
-                                {/* CVSS Scores - Handle both original and adjusted */}
-                                {cvss && (cvss.baseScore || cvss.adjustedScore || risk?.original?.cvss || risk?.adjusted?.score) && (
-                                    <InfoBlock title="CVSS Score">
-                                        {/* Base CVSS Score */}
-                                        {(cvss.baseScore || risk?.original?.cvss) && (
-                                            <p>Base: <span className="font-semibold tabular-nums">
-                                                {(cvss.baseScore || risk.original.cvss).toFixed(1)}
-                                            </span></p>
-                                        )}
-                                        
-                                        {/* Adjusted CVSS Score */}
-                                        {(cvss.adjustedScore || risk?.adjusted?.score) && (
-                                            <p>Adjusted: <span className="font-semibold tabular-nums text-orange-600">
-                                                {(cvss.adjustedScore || risk.adjusted.score).toFixed(1)}
-                                            </span></p>
-                                        )}
-                                        
-                                        {/* Vector */}
-                                        {(cvss.vector || risk?.original?.vector) && (
-                                            <p className="text-xs text-muted-foreground">
-                                                Vector: {cvss.vector || risk.original.vector}
-                                            </p>
-                                        )}
-                                    </InfoBlock>
-                                )}
-                                
-                                {/* Risk Adjustments */}
-                                {risk?.adjusted?.adjustments && Object.keys(risk.adjusted.adjustments).length > 0 && (
-                                    <InfoBlock title="Risk Factors Applied">
-                                        <div className="flex flex-wrap gap-1">
-                                            {Object.entries(risk.adjusted.adjustments).map(([factor, value]) => (
-                                                <div key={factor} className="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded">
-                                                    {factor}: {typeof value === 'number' ? (value > 1 ? `×${value.toFixed(1)}` : `+${value.toFixed(1)}`) : String(value)}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </InfoBlock>
-                                )}
-                            </div>
-                           
-                           <div className="md:col-span-2 space-y-6">
-                                <InfoBlock title="Description">
-                                    <p>{description}</p>
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2 text-sm text-[#6B7280]">
+                             <MapPin className="w-4 h-4" strokeWidth={1.5} />
+                             <span className="font-mono text-xs">{locationStr}</span>
+                        </div>
+                        <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} strokeWidth={1.5} />
+                    </div>
+                </div>
+            </button>
+            {isOpen && (
+                <div className="px-6 pb-6 border-t border-[#F3F4F6]">
+                   <div className="pt-6 grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <div className="md:col-span-1 space-y-6">
+                            {cweDisplayId && (
+                                <InfoBlock title="CWE">
+                                    <p><span className="font-semibold">{cweDisplayId}</span>: {cwe.name}</p>
                                 </InfoBlock>
-
-                                {vulnerableCode && (
-                                    <div>
-                                         <h4 className="text-[11px] font-semibold uppercase text-[#9CA3AF] mb-2 tracking-[0.05em]">Vulnerable Code</h4>
-                                        <div className="bg-[#F9FAFB] rounded-md p-3">
-                                            <pre className="text-xs font-mono text-[#374151] overflow-x-auto">
-                                                <code>{vulnerableCode}</code>
-                                            </pre>
-                                        </div>
+                            )}
+                            {owasp && (
+                                <InfoBlock title="OWASP">
+                                    <p><span className="font-semibold">{owasp.category}</span> – {owasp.title}</p>
+                                </InfoBlock>
+                            )}
+                            {cvss && (cvss.baseScore || cvss.adjustedScore) && (
+                                <InfoBlock title="CVSS Score">
+                                    {cvss.baseScore && <p>Base: <span className="font-semibold tabular-nums">{cvss.baseScore.toFixed(1)}</span></p>}
+                                    {cvss.adjustedScore && cvss.adjustedScore !== cvss.baseScore && (
+                                        <p>Adjusted: <span className="font-semibold tabular-nums text-orange-600">{cvss.adjustedScore.toFixed(1)}</span></p>
+                                    )}
+                                    {cvss.vector && <p className="text-xs text-muted-foreground">Vector: {cvss.vector}</p>}
+                                </InfoBlock>
+                            )}
+                            
+                            {/* Risk Adjustments */}
+                            {finding.risk?.adjusted?.adjustments && (
+                                <InfoBlock title="Risk Factors Applied">
+                                    <div className="flex flex-wrap gap-1">
+                                        {Object.entries(finding.risk.adjusted.adjustments).map(([factor, value]) => (
+                                            <div key={factor} className="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded">
+                                                {factor}: {typeof value === 'number' ? (value > 1 ? `×${value.toFixed(1)}` : `+${value.toFixed(1)}`) : String(value)}
+                                            </div>
+                                        ))}
                                     </div>
-                                )}
+                                </InfoBlock>
+                            )}
+                        </div>
+                       
+                       <div className="md:col-span-2 space-y-6">
+                            <InfoBlock title="Description">
+                                <p>{description}</p>
+                            </InfoBlock>
 
+                            {vulnerableCode && (
                                 <div>
-                                    <h4 className="text-[11px] font-semibold uppercase text-[#9CA3AF] mb-2 tracking-[0.05em] flex items-center gap-2">
-                                        <Lightbulb className="w-4 h-4 text-[#AFCB0E]" strokeWidth={1.5} /> 
-                                        Recommended Fix
-                                    </h4>
-                                    <p className="text-sm text-[#374151]">{remediation}</p>
+                                     <h4 className="text-[11px] font-semibold uppercase text-[#9CA3AF] mb-2 tracking-[0.05em]">Vulnerable Code</h4>
+                                    <div className="bg-[#F9FAFB] rounded-md p-3">
+                                        <pre className="text-xs font-mono text-[#374151] overflow-x-auto">
+                                            <code>{vulnerableCode}</code>
+                                        </pre>
+                                    </div>
                                 </div>
-                           </div>
+                            )}
+
+                            <div>
+                                <h4 className="text-[11px] font-semibold uppercase text-[#9CA3AF] mb-2 tracking-[0.05em] flex items-center gap-2"><Lightbulb className="w-4 h-4 text-[#AFCB0E]" strokeWidth={1.5} /> Recommended Fix</h4>
+                                <p className="text-sm text-[#374151]">{remediation}</p>
+                            </div>
                        </div>
-                    </div>
-                )}
-            </div>
-        );
-    } catch (error) {
-        console.error('🚨 Error rendering finding:', error, finding);
-        return (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-                <p className="text-red-600 text-sm">Error displaying vulnerability. Check console for details.</p>
-            </div>
-        );
-    }
+                   </div>
+                </div>
+            )}
+        </div>
+    );
 };
 
 

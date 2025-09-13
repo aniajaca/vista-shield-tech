@@ -12,7 +12,91 @@ import { runConnectionTest } from "@/utils/testConnection";
 
 const API_BASE_URL = 'https://semgrep-backend-production.up.railway.app';
 
-// Remove the old scanDependencies function since we now use the API function
+async function scanDependencies(packageJsonContent: string, packageLockContent?: string, riskConfig = null, context = null) {
+  try {
+    console.log('📦 Scanning dependencies...');
+    
+    // Parse JSON strings into objects as expected by backend
+    let packageJsonObj;
+    let packageLockObj = null;
+    
+    try {
+      packageJsonObj = JSON.parse(packageJsonContent);
+    } catch (error) {
+      throw new Error('Invalid package.json format: ' + error.message);
+    }
+    
+    if (packageLockContent) {
+      try {
+        packageLockObj = JSON.parse(packageLockContent);
+      } catch (error) {
+        throw new Error('Invalid package-lock.json format: ' + error.message);
+      }
+    }
+    
+    // Debug before sending to backend
+    console.log('➡️ About to send packageJson:', packageJsonObj);
+    console.log('➡️ Dependencies:', packageJsonObj?.dependencies);
+    console.log('➡️ DevDependencies:', packageJsonObj?.devDependencies);
+    try {
+      const sampleDeps = Object.entries(packageJsonObj?.dependencies || {}).slice(0, 3);
+      console.log('➡️ Dependencies sample:', sampleDeps);
+    } catch (e) {
+      console.warn('⚠️ Could not iterate dependencies:', e);
+    }
+    const payload: any = {
+      packageJson: packageJsonObj,
+      packageLockJson: packageLockObj
+    };
+    
+    // Add risk config and context if provided
+    if (riskConfig) {
+      payload.riskConfig = riskConfig;
+    }
+    if (context) {
+      payload.context = context;
+    }
+    
+    console.log('📦 Dependencies payload with risk settings:', payload);
+    
+    const response = await fetch(`${API_BASE_URL}/scan-dependencies`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      mode: 'cors',
+      body: JSON.stringify(payload)
+    });
+
+    console.log('📨 Response status:', response.status, response.statusText);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ Error response:', errorText);
+      throw new Error(`HTTP ${response.status}: ${errorText}`);
+    }
+
+    const data = await response.json();
+    console.log('✅ Dependencies scan successful:', data);
+    
+    return {
+      success: true,
+      data: data
+    };
+  } catch (error) {
+    console.error('❌ Dependencies scan failed:', error);
+    
+    return {
+      success: false,
+      error: error.message || 'Dependencies scanning failed',
+      details: {
+        originalError: error.message,
+        timestamp: new Date().toISOString()
+      }
+    };
+  }
+}
 
 export default function Dependencies() {
     const [isLoading, setIsLoading] = useState(false);
@@ -63,20 +147,19 @@ export default function Dependencies() {
             console.log('🎯 Using risk config for dependencies:', riskConfig);
             console.log('🌍 Using context for dependencies:', context);
             
-            // Import the API function
-            const { scanDependencies } = await import('@/lib/api');
-            
-            // Parse JSON to object for API
-            let packageJsonObj;
-            try {
-                packageJsonObj = JSON.parse(options.packageJson);
-            } catch (error) {
-                throw new Error('Invalid package.json format: ' + error.message);
+            const resp = await scanDependencies(
+                options.packageJson, 
+                options.packageLock,
+                riskConfig,
+                context
+            );
+
+            if (resp.success) {
+                console.log('📊 Setting dependencies scan result (raw):', resp.data);
+                setScanResult(resp.data);
+            } else {
+                throw new Error(resp.error);
             }
-            
-            const response = await scanDependencies(packageJsonObj, riskConfig, context);
-            console.log('✅ Dependencies scan successful:', response);
-            setScanResult(response);
 
         } catch (err) {
             console.error('🚨 Dependencies scan process failed:', err);
@@ -167,29 +250,11 @@ export default function Dependencies() {
                         <div className="space-y-8">
                             <DependenciesRiskOverviewCard
                                 riskAssessment={{
-                                    riskScore: scanResult.score?.final || scanResult.riskAssessment?.riskScore || scanResult.risk_score || 0,
-                                    riskLevel: scanResult.risk?.level || scanResult.riskAssessment?.riskLevel || scanResult.risk_level || 'Low',
-                                    findingsBreakdown: scanResult.riskAssessment?.severityDistribution || scanResult.stats || scanResult.findingsBreakdown || {},
-                                    
-                                    // File-level adjustments
-                                    normalizedScore: scanResult.score?.normalized || scanResult.normalizedScore,
-                                    finalScore: scanResult.score?.final || scanResult.finalScore || scanResult.risk_score || scanResult.riskScore,
-                                    multiplier: scanResult.fileScore?.multiplier || scanResult.multiplier,
-                                    priority: scanResult.risk?.priority?.level || scanResult.priority,
-                                    confidence: scanResult.confidence,
-                                    
-                                    // Applied factors
-                                    appliedFactors: scanResult.appliedFactors || scanResult.riskAssessment?.appliedFactors || 
-                                        (scanResult.context?.factors ? Object.entries(scanResult.context.factors)
-                                            .filter(([_, config]: any) => config.enabled)
-                                            .map(([name, config]: any) => ({
-                                                name,
-                                                value: config.weight || config.value || 1,
-                                                type: config.weight ? 'multiplier' : 'additive',
-                                                description: config.description
-                                            })) : [])
+                                    riskScore: scanResult.risk_score || 0,
+                                    riskLevel: scanResult.risk_level || 'Low',
+                                    findingsBreakdown: scanResult.stats || {}
                                 }}
-                                performance={scanResult.performance || {
+                                performance={{
                                     scanTime: scanResult.scan_time,
                                     packagesScanned: scanResult.packages_scanned,
                                     dataSources: scanResult.data_sources,
@@ -197,15 +262,15 @@ export default function Dependencies() {
                                 }}
                             />
                             <DependenciesFindingsCard
-                                vulnerabilities={scanResult.findings || scanResult.vulnerabilities || []}
+                                vulnerabilities={scanResult.vulnerabilities || []}
                             />
                             <DependenciesExportSection 
-                                vulnerabilities={scanResult.findings || scanResult.vulnerabilities || []}
+                                vulnerabilities={scanResult.vulnerabilities || []}
                                 riskAssessment={{
-                                    riskScore: scanResult.score?.final || scanResult.risk_score || 0,
-                                    riskLevel: scanResult.risk?.level || scanResult.risk_level || 'Low'
+                                    riskScore: scanResult.risk_score || 0,
+                                    riskLevel: scanResult.risk_level || 'Low'
                                 }}
-                                performance={scanResult.performance || {
+                                performance={{
                                     scanTime: scanResult.scan_time,
                                     packagesScanned: scanResult.packages_scanned,
                                     dataSources: scanResult.data_sources
