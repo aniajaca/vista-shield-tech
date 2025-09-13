@@ -59,8 +59,8 @@ const FindingItem = ({ finding }) => {
         } = finding || {};
 
         const title = rawTitle || name || check_id || message || "Security Vulnerability";
-        const description = cwe?.description || rawDesc || message || 'Security vulnerability detected';
-        const remediation = rawRemediation?.strategy || rawRemediation || 'Review and apply security best practices';
+        const description = normalizeText(cwe?.description || rawDesc || message) || 'Security vulnerability detected';
+        const remediation = normalizeText(rawRemediation) || 'Review and apply security best practices';
         
         const location = rawLocation || start;
         const filePath = location?.path || location?.file || finding?.file || "Unknown file";
@@ -107,40 +107,40 @@ const FindingItem = ({ finding }) => {
                             <div className="md:col-span-1 space-y-6">
                                 {cweDisplayId && (
                                     <InfoBlock title="CWE">
-                                        <p><span className="font-semibold">{cweDisplayId}</span>: {cwe?.name || 'Security Weakness'}</p>
+                                        <p><span className="font-semibold">{cweDisplayId}</span>: {normalizeText(cwe?.name) || 'Security Weakness'}</p>
                                     </InfoBlock>
                                 )}
                                 {owasp && (
                                     <InfoBlock title="OWASP">
-                                        <p><span className="font-semibold">{owasp.category}</span> – {owasp.title}</p>
+                                        <p><span className="font-semibold">{normalizeText(owasp.category)}</span> – {normalizeText(owasp.title)}</p>
                                     </InfoBlock>
                                 )}
                                 
                                 {/* CVSS Scores - Handle both original and adjusted */}
-                                {cvss && (cvss.baseScore || cvss.adjustedScore || risk?.original?.cvss || risk?.adjusted?.score) && (
+                                {(cvss && (cvss.baseScore || cvss.adjustedScore || cvss.vector)) || (risk?.original?.cvss || risk?.adjusted?.score) ? (
                                     <InfoBlock title="CVSS Score">
                                         {/* Base CVSS Score */}
-                                        {(cvss.baseScore || risk?.original?.cvss) && (
+                                        {(cvss?.baseScore ?? risk?.original?.cvss) !== undefined && (
                                             <p>Base: <span className="font-semibold tabular-nums">
-                                                {(cvss.baseScore || risk.original.cvss).toFixed(1)}
+                                                {Number(cvss?.baseScore ?? risk?.original?.cvss).toFixed(1)}
                                             </span></p>
                                         )}
                                         
                                         {/* Adjusted CVSS Score */}
-                                        {(cvss.adjustedScore || risk?.adjusted?.score) && (
+                                        {(cvss?.adjustedScore ?? risk?.adjusted?.score) !== undefined && (
                                             <p>Adjusted: <span className="font-semibold tabular-nums text-orange-600">
-                                                {(cvss.adjustedScore || risk.adjusted.score).toFixed(1)}
+                                                {Number(cvss?.adjustedScore ?? risk?.adjusted?.score).toFixed(1)}
                                             </span></p>
                                         )}
                                         
                                         {/* Vector */}
-                                        {(cvss.vector || risk?.original?.vector) && (
+                                        {(cvss?.vector ?? risk?.original?.vector) && (
                                             <p className="text-xs text-muted-foreground">
-                                                Vector: {cvss.vector || risk.original.vector}
+                                                Vector: {cvss?.vector ?? risk?.original?.vector}
                                             </p>
                                         )}
                                     </InfoBlock>
-                                )}
+                                ) : null}
                                 
                                 {/* Risk Adjustments */}
                                 {risk?.adjusted?.adjustments && Object.keys(risk.adjusted.adjustments).length > 0 && (
