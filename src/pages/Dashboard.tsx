@@ -270,6 +270,7 @@ export default function Dashboard() {
                                                     description: config.description
                                                 })) : [])
                                     }}
+                                    metadata={scanResult.metadata}
                                     performance={{
                                         scanTime: scanResult.performance?.scanTime || (scanEndTime && scanStartTime ? (scanEndTime - scanStartTime) / 1000 : undefined),
                                         rulesExecuted: scanResult.performance?.rulesExecuted || (scanResult.findings?.length || 0)

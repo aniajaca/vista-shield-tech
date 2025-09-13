@@ -49,10 +49,10 @@ export interface GroupedFinding extends Finding {
 export function deduplicateFindings(findings: Finding[]): GroupedFinding[] {
   const groups = new Map<string, Finding[]>();
 
-  // Group findings
+  // Group findings by {file, cwe, scope}
   findings.forEach(finding => {
     const file = finding.location?.path || finding.location?.file || finding.start?.path || finding.start?.file || finding.file || 'unknown';
-    const cwe = finding.cwe?.id || 'unknown';
+    const cwe = finding.cwe?.id || finding.check_id || 'unknown';
     const scope = finding.scope || finding.functionName || finding.route || 'global';
     
     const groupKey = `${file}:${cwe}:${scope}`;
@@ -63,7 +63,7 @@ export function deduplicateFindings(findings: Finding[]): GroupedFinding[] {
     groups.get(groupKey)!.push(finding);
   });
 
-  // Process each group
+  // Process each group - keep highest severity, attach "also seen at lines..."
   const deduplicated: GroupedFinding[] = [];
 
   groups.forEach(groupFindings => {
@@ -80,7 +80,7 @@ export function deduplicateFindings(findings: Finding[]): GroupedFinding[] {
       return bScore - aScore;
     });
 
-    const representative = groupFindings[0];
+    const representative = groupFindings[0]; // Highest severity
     const duplicateLines = groupFindings.slice(1).map(f => {
       return f.location?.line || f.location?.row || f.start?.line || f.start?.row || 0;
     }).filter(line => line > 0);
@@ -162,16 +162,36 @@ export function getRiskLevelStyles(level: string) {
 }
 
 /**
- * Format scan time for display
+ * Format scan time for display - prioritize backend metadata
  */
-export function formatScanTime(startTime: number, endTime?: number, backendTime?: number): string {
-  if (backendTime && backendTime > 0) {
-    return backendTime < 1000 ? `${Math.round(backendTime)}ms` : `${(backendTime / 1000).toFixed(2)}s`;
+export function formatScanTime(meta?: any, startTime?: number, endTime?: number): string {
+  // Prioritize backend metadata
+  if (meta?.calculationTimeMs !== undefined) {
+    const timeMs = meta.calculationTimeMs;
+    return timeMs < 1000 ? `${Math.round(timeMs)}ms` : `${(timeMs / 1000).toFixed(2)}s`;
   }
   
+  // Fallback to client-side calculation
   if (endTime && startTime) {
     const duration = endTime - startTime;
     return duration < 1000 ? `${Math.round(duration)}ms` : `${(duration / 1000).toFixed(2)}s`;
+  }
+  
+  return 'N/A';
+}
+
+/**
+ * Get rules applied count - prioritize backend metadata
+ */
+export function getRulesAppliedCount(meta?: any, groupedFindings?: GroupedFinding[]): string {
+  // Prioritize backend metadata
+  if (meta?.rulesApplied !== undefined) {
+    return String(meta.rulesApplied);
+  }
+  
+  // Fallback to post-deduplication count
+  if (groupedFindings) {
+    return String(groupedFindings.length);
   }
   
   return 'N/A';

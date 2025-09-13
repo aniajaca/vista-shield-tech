@@ -119,14 +119,23 @@ const Metric = ({ label, value }) => (
     </div>
 );
 
-export default function RiskOverviewCard({ riskAssessment = {}, performance = {} }: RiskOverviewCardProps) {
+export default function RiskOverviewCard({ riskAssessment = {}, metadata = {}, performance = {} }: RiskOverviewCardProps) {
     const { 
         riskScore, riskLevel, findingsBreakdown = {}, 
         normalizedScore, finalScore, multiplier, priority, confidence, appliedFactors = []
     } = riskAssessment;
     const totalVulns = Object.values(findingsBreakdown).reduce((a, b) => (typeof b === 'number' ? a + b : a), 0);
     
-    const { scanTime, rulesExecuted } = performance;
+    // Prioritize metadata, then performance, then calculated values
+    const scanTime = metadata?.calculationTimeMs !== undefined ? 
+        (metadata.calculationTimeMs < 1000 ? `${Math.round(metadata.calculationTimeMs)}ms` : `${(metadata.calculationTimeMs / 1000).toFixed(2)}s`) :
+        (performance?.scanTime !== undefined ? 
+            (performance.scanTime < 1000 ? `${Math.round(performance.scanTime)}ms` : `${(performance.scanTime / 1000).toFixed(2)}s`) : 
+            'N/A');
+    
+    const rulesApplied = metadata?.rulesApplied !== undefined ? 
+        String(metadata.rulesApplied) :
+        (performance?.rulesExecuted !== undefined ? String(performance.rulesExecuted) : 'N/A');
     
     return (
         <div className="bg-white p-6 rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
@@ -179,11 +188,11 @@ export default function RiskOverviewCard({ riskAssessment = {}, performance = {}
                         <div className="space-y-1">
                             <Metric 
                                 label="Scan Time" 
-                                value={typeof scanTime === 'number' ? `${scanTime.toFixed(2)}s` : 'N/A'}
+                                value={scanTime}
                             />
                             <Metric 
                                 label="Rules Applied" 
-                                value={rulesExecuted || 'N/A'}
+                                value={rulesApplied}
                             />
                             {priority && (
                                 <Metric label="Priority" value={priority} />

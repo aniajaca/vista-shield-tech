@@ -58,21 +58,22 @@ export function RiskSettingsDrawer({ children, onSettingsChange }: RiskSettingsD
   });
 
   const handleApplySettings = () => {
+    const riskState = { riskConfig, context };
     saveCurrentProfile();
     
-    // Show snackbar if there's a previous scan
+    // Show snackbar if there's a previous scan to re-run
     if (lastScan && onSettingsChange) {
       toast("Apply new risk settings to current results?", {
         action: {
           label: "Apply",
           onClick: () => {
-            onSettingsChange(riskConfig, context);
-            toast.success("Risk settings applied to current results");
+            onSettingsChange(riskState.riskConfig, riskState.context);
+            toast.success("Risk settings applied - re-running scan");
           },
         },
       });
     } else if (onSettingsChange) {
-      onSettingsChange(riskConfig, context);
+      onSettingsChange(riskState.riskConfig, riskState.context);
       toast.success("Risk settings applied successfully");
     } else {
       toast.success("Risk settings saved");
@@ -228,8 +229,8 @@ export function RiskSettingsDrawer({ children, onSettingsChange }: RiskSettingsD
             <div className="space-y-6">
               <h3 className="text-lg font-semibold">Environmental Factors</h3>
               
-              <div className="text-xs text-muted-foreground bg-blue-50 p-2 rounded">
-                <strong>Legend:</strong> Multipliers 0.5–3.0 (file-level) • Additives 0–3.0 (vulnerability-level)
+              <div className="text-xs text-muted-foreground bg-accent/5 border border-accent/20 p-2 rounded">
+                <strong>Legend:</strong> Multipliers 0.5–3.0 (file level) • Additives 0–3.0 (vuln level)
               </div>
 
               {/* Context Toggles */}
@@ -246,6 +247,7 @@ export function RiskSettingsDrawer({ children, onSettingsChange }: RiskSettingsD
                       onCheckedChange={(checked) =>
                         setContext(prev => ({ ...prev, [factor]: checked }))
                       }
+                      className="data-[state=checked]:bg-accent"
                     />
                   </div>
                 ))}
@@ -272,6 +274,7 @@ export function RiskSettingsDrawer({ children, onSettingsChange }: RiskSettingsD
                               }
                             }))
                           }
+                          className="data-[state=checked]:bg-accent"
                         />
                         <div className="flex-1">
                           <span className="text-sm font-mono">{factorId}</span>

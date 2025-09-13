@@ -107,9 +107,9 @@ const FindingItem = ({ finding }: { finding: GroupedFinding }) => {
         const cweLink = cweDisplayId ? getCweLink(cweDisplayId) : null;
 
         // Get base and adjusted CVSS scores from backend structure
-        const baseScore = cvss?.baseScore ?? risk?.original?.cvss;
-        const adjustedScore = cvss?.adjustedScore ?? risk?.adjusted?.score;
-        const cvssVector = cvss?.vector ?? risk?.original?.vector;
+        const baseScore = (finding as any).original?.cvss?.baseScore ?? cvss?.baseScore ?? risk?.original?.cvss;
+        const adjustedScore = (finding as any).adjusted?.score ?? cvss?.adjustedScore ?? risk?.adjusted?.score;
+        const cvssVector = (finding as any).original?.vector ?? cvss?.vector ?? risk?.original?.vector;
 
         const copyToClipboard = (text: string) => {
             navigator.clipboard.writeText(text);
