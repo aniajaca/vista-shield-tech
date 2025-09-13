@@ -219,32 +219,32 @@ export default function Dashboard() {
                         <ErrorBoundary>
                             <div className="space-y-8">
                                 <ErrorBoundary>
-                                    <RiskOverviewCard
-                                        riskAssessment={{
-                                            riskScore: scanResult.score?.final || scanResult.riskAssessment?.riskScore,
-                                            riskLevel: scanResult.risk?.level || scanResult.riskAssessment?.riskLevel,
-                                            findingsBreakdown: scanResult.riskAssessment?.severityDistribution || scanResult.riskAssessment?.findingsBreakdown,
-                                            
-                                            // File-level adjustments
-                                            normalizedScore: scanResult.score?.normalized || scanResult.riskAssessment?.normalizedScore,
-                                            finalScore: scanResult.score?.final || scanResult.riskAssessment?.finalScore || scanResult.riskAssessment?.riskScore,
-                                            multiplier: scanResult.fileScore?.multiplier || scanResult.riskAssessment?.multiplier,
-                                            priority: scanResult.risk?.priority?.level || scanResult.riskAssessment?.priority,
-                                            confidence: scanResult.riskAssessment?.confidence,
-                                            
-                                            // Applied factors from file or context
-                                            appliedFactors: scanResult.appliedFactors || scanResult.riskAssessment?.appliedFactors || 
-                                                (scanResult.context?.factors ? Object.entries(scanResult.context.factors)
-                                                    .filter(([_, config]: any) => config.enabled)
-                                                    .map(([name, config]: any) => ({
-                                                        name,
-                                                        value: config.weight || config.value || 1,
-                                                        type: config.weight ? 'multiplier' : 'additive',
-                                                        description: config.description
-                                                    })) : [])
-                                        }}
-                                        performance={scanResult.performance}
-                                    />
+                                <RiskOverviewCard
+                                    riskAssessment={{
+                                        riskScore: scanResult.score?.final || scanResult.riskAssessment?.riskScore,
+                                        riskLevel: scanResult.risk?.level || scanResult.riskAssessment?.riskLevel,
+                                        findingsBreakdown: scanResult.riskAssessment?.severityDistribution || scanResult.riskAssessment?.findingsBreakdown,
+                                        
+                                        // File-level adjustments
+                                        normalizedScore: scanResult.score?.normalized || scanResult.riskAssessment?.normalizedScore,
+                                        finalScore: scanResult.score?.final || scanResult.riskAssessment?.finalScore || scanResult.riskAssessment?.riskScore,
+                                        multiplier: scanResult.fileScore?.multiplier || scanResult.riskAssessment?.multiplier || (scanResult.score?.normalized ? (scanResult.score.final ?? 0) / (scanResult.score.normalized || 1) : undefined),
+                                        priority: scanResult.risk?.priority?.level || scanResult.riskAssessment?.priority,
+                                        confidence: scanResult.riskAssessment?.confidence,
+                                        
+                                        // Applied factors from file or context
+                                        appliedFactors: scanResult.appliedFactors || scanResult.riskAssessment?.appliedFactors || 
+                                            (scanResult.context?.factors ? Object.entries(scanResult.context.factors)
+                                                .filter(([_, config]: any) => config.enabled)
+                                                .map(([name, config]: any) => ({
+                                                    name,
+                                                    value: config.weight || config.value || 1,
+                                                    type: config.weight ? 'multiplier' : 'additive',
+                                                    description: config.description
+                                                })) : [])
+                                    }}
+                                    performance={scanResult.performance}
+                                />
                                 </ErrorBoundary>
                                 <ErrorBoundary>
                                     <FindingsCard

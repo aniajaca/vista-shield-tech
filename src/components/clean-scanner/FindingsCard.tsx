@@ -1,6 +1,22 @@
 import React, { useState } from 'react';
 import { ChevronDown, MapPin, Lightbulb } from 'lucide-react';
 
+const normalizeText = (value: any): string => {
+    if (!value) return '';
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number') return String(value);
+    if (typeof value === 'object') {
+        // Known shapes from API
+        const { strategy, text, fix, recommendation, prevention, details, example } = value as any;
+        const primary = strategy || text || recommendation || fix;
+        if (primary) return String(primary);
+        const parts = [fix, recommendation, prevention, details, example].filter(Boolean).map(String);
+        if (parts.length) return parts.join(' ');
+        try { return JSON.stringify(value); } catch { return String(value); }
+    }
+    return String(value);
+};
+
 const SeverityPill = ({ severity }) => {
     const s = severity?.toLowerCase() || 'info';
     const styles = {

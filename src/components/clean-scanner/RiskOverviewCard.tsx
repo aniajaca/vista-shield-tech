@@ -34,21 +34,21 @@ const RiskScoreIndicator = ({ normalizedScore, finalScore, level = 'None', multi
             <div>
                 <div className="flex items-center justify-center gap-2 mb-2">
                     <span className="text-sm text-[#6B7280]">Normalized:</span>
-                    <span className="text-2xl font-semibold text-[#374151] tabular-nums">{normalizedScore.toFixed(0)}</span>
+                    <span className="text-2xl font-semibold text-[#374151] tabular-nums">{Number(normalizedScore).toFixed(0)}</span>
                 </div>
-                {multiplier && multiplier !== 1 && (
+                {multiplier && multiplier !== 1 && isFinite(multiplier) && (
                     <div className="flex items-center justify-center gap-2 mb-2">
-                        <span className="text-xs text-[#9CA3AF]">×{multiplier.toFixed(1)}</span>
+                        <span className="text-xs text-[#9CA3AF]">×{Number(multiplier).toFixed(2)}</span>
                     </div>
                 )}
                 <div className="flex items-center justify-center gap-2">
                     <span className="text-sm text-[#6B7280]">Final:</span>
-                    <span className="text-[48px] font-semibold tracking-[-0.04em] text-[#374151] tabular-nums">{finalScore.toFixed(0)}</span>
+                    <span className="text-[48px] font-semibold tracking-[-0.04em] text-[#374151] tabular-nums">{Number(finalScore).toFixed(0)}</span>
                 </div>
             </div>
         ) : (
             <p className="text-[72px] font-semibold tracking-[-0.04em] text-[#374151] tabular-nums">
-                {(finalScore || normalizedScore || 0).toFixed(0)}
+                {Number(finalScore || normalizedScore || 0).toFixed(0)}
             </p>
         )}
         <p className="text-sm font-medium text-[#6B7280] mt-2">{level} Risk</p>

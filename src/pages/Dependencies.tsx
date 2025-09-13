@@ -174,7 +174,7 @@ export default function Dependencies() {
                                     // File-level adjustments
                                     normalizedScore: scanResult.score?.normalized || scanResult.normalizedScore,
                                     finalScore: scanResult.score?.final || scanResult.finalScore || scanResult.risk_score || scanResult.riskScore,
-                                    multiplier: scanResult.fileScore?.multiplier || scanResult.multiplier,
+                                    multiplier: scanResult.fileScore?.multiplier || scanResult.multiplier || (scanResult.score?.normalized ? (scanResult.score.final ?? 0) / (scanResult.score.normalized || 1) : undefined),
                                     priority: scanResult.risk?.priority?.level || scanResult.priority,
                                     confidence: scanResult.confidence,
                                     
