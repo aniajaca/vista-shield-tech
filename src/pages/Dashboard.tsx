@@ -14,69 +14,23 @@ import { runConnectionTest } from "@/utils/testConnection";
 const API_BASE_URL = 'https://semgrep-backend-production.up.railway.app';
 
 /**
- * Scan uploaded file by reading its content and sending to /scan-code endpoint
+ * Scan uploaded file using the API function
  */
-async function scanFile(file, riskConfig = null, context = null) {
+async function scanFileForDashboard(file, riskConfig = null, context = null) {
   try {
-    console.log('📄 Reading file content:', { name: file.name, size: file.size });
+    console.log('📄 Starting file scan:', { name: file.name, size: file.size });
     
-    // Read file content as text
-    const code = await file.text();
+    // Import the API function
+    const { scanFile } = await import('@/lib/api');
     
-    console.log('🚀 Sending to /scan-code endpoint with JSON payload');
+    // Call the updated API function
+    const response = await scanFile(file, riskConfig, context);
     
-    const payload: any = {
-      code: code,
-      filename: file.name
-    };
-    
-    // Add risk config and context if provided
-    if (riskConfig) {
-      payload.riskConfig = riskConfig;
-    }
-    if (context) {
-      payload.context = context;
-    }
-    
-    console.log('📦 Payload with risk settings:', payload);
-
-    const response = await fetch(`${API_BASE_URL}/scan-code`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      mode: 'cors',
-      body: JSON.stringify(payload)
-    });
-
-    console.log('📨 Response status:', response.status, response.statusText);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('❌ Error response:', errorText);
-      throw new Error(`HTTP ${response.status}: ${errorText}`);
-    }
-
-    const data = await response.json();
-    console.log('✅ Scan successful, received data:', data);
-    
-    // Debug the response structure
-    console.log('🔍 API Response Structure:');
-    console.log('- Type:', typeof data);
-    console.log('- Keys:', Object.keys(data));
-    console.log('- findings:', data.findings);
-    console.log('- findings type:', typeof data.findings);
-    console.log('- findings length:', data.findings?.length);
-    
-    if (data.findings && data.findings.length > 0) {
-      console.log('- First finding:', data.findings[0]);
-      console.log('- First finding keys:', Object.keys(data.findings[0]));
-    }
+    console.log('✅ Scan successful, received data:', response);
     
     return {
       success: true,
-      data: data
+      data: response
     };
   } catch (error) {
     console.error('❌ Scan failed:', error);
@@ -141,7 +95,7 @@ export default function Dashboard() {
             console.log('🎯 Using risk config:', riskConfig);
             console.log('🌍 Using context:', context);
             
-            const response = await scanFile(options.file, riskConfig, context);
+            const response = await scanFileForDashboard(options.file, riskConfig, context);
 
             if (response.success) {
                 console.log('📊 Setting scan result:', response.data);
@@ -149,30 +103,6 @@ export default function Dashboard() {
                 // Debug: Log findings data structure for verification
                 if (response.data.findings && response.data.findings.length > 0) {
                     console.log('🔍 First finding structure:', response.data.findings[0]);
-                    
-                    // Check for missing or fallback data
-                    response.data.findings.forEach((finding, index) => {
-                        const issues = [];
-                        if (!finding.title && !finding.name && !finding.check_id) {
-                            issues.push('Missing specific vulnerability name');
-                        }
-                        if (!finding.cwe || !finding.cwe.description) {
-                            issues.push('Missing CWE details');
-                        }
-                        if (!finding.owasp || !finding.owasp.category) {
-                            issues.push('Missing OWASP classification');
-                        }
-                        if (!finding.cvss || (!finding.cvss.baseScore && !finding.cvss.adjustedScore)) {
-                            issues.push('Missing CVSS scores');
-                        }
-                        if (!finding.businessImpact) {
-                            issues.push('Missing business impact');
-                        }
-                        
-                        if (issues.length > 0) {
-                            console.warn(`🚨 Finding ${index + 1} missing data:`, issues, finding);
-                        }
-                    });
                 }
                 
                 setScanResult(response.data);
@@ -278,15 +208,15 @@ export default function Dashboard() {
                         <div className="space-y-8">
                             <RiskOverviewCard
                                 riskAssessment={{
-                                    riskScore: scanResult.riskAssessment?.riskScore,
-                                    riskLevel: scanResult.riskAssessment?.riskLevel,
-                                    findingsBreakdown: scanResult.riskAssessment?.findingsBreakdown,
+                                    riskScore: scanResult.score?.final || scanResult.riskAssessment?.riskScore,
+                                    riskLevel: scanResult.risk?.level || scanResult.riskAssessment?.riskLevel,
+                                    findingsBreakdown: scanResult.riskAssessment?.severityDistribution || scanResult.riskAssessment?.findingsBreakdown,
                                     
                                     // File-level adjustments
-                                    normalizedScore: scanResult.fileScore?.normalized || scanResult.riskAssessment?.normalizedScore,
-                                    finalScore: scanResult.fileScore?.final || scanResult.riskAssessment?.finalScore || scanResult.riskAssessment?.riskScore,
+                                    normalizedScore: scanResult.score?.normalized || scanResult.riskAssessment?.normalizedScore,
+                                    finalScore: scanResult.score?.final || scanResult.riskAssessment?.finalScore || scanResult.riskAssessment?.riskScore,
                                     multiplier: scanResult.fileScore?.multiplier || scanResult.riskAssessment?.multiplier,
-                                    priority: scanResult.riskAssessment?.priority,
+                                    priority: scanResult.risk?.priority?.level || scanResult.riskAssessment?.priority,
                                     confidence: scanResult.riskAssessment?.confidence,
                                     
                                     // Applied factors from file or context
