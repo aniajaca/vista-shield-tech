@@ -1,4 +1,7 @@
 import React from 'react';
+import { Info } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 interface RiskAssessment {
     riskScore?: number;
@@ -44,12 +47,44 @@ const RiskScoreIndicator = ({ normalizedScore, finalScore, level = 'None', multi
                 <div className="flex items-center justify-center gap-2">
                     <span className="text-sm text-[#6B7280]">Final:</span>
                     <span className="text-[48px] font-semibold tracking-[-0.04em] text-[#374151] tabular-nums">{Number(finalScore).toFixed(0)}</span>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-4 w-4 p-0 text-[#9CA3AF] hover:text-[#6B7280]">
+                          <Info className="h-3 w-3" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-80">
+                        <div className="space-y-2">
+                          <h4 className="font-medium text-sm">File Score (0–100)</h4>
+                          <p className="text-sm text-muted-foreground">
+                            This is a normalized risk index for the file (0–100). It's derived from the mix of severities in the file and your file-level multipliers, so you can prioritize where to fix first. It's not a CVSS score.
+                          </p>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                 </div>
             </div>
         ) : (
-            <p className="text-[72px] font-semibold tracking-[-0.04em] text-[#374151] tabular-nums">
-                {Number(finalScore || normalizedScore || 0).toFixed(0)}
-            </p>
+            <div className="flex items-center justify-center gap-2">
+                <p className="text-[72px] font-semibold tracking-[-0.04em] text-[#374151] tabular-nums">
+                    {Number(finalScore || normalizedScore || 0).toFixed(0)}
+                </p>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-4 w-4 p-0 text-[#9CA3AF] hover:text-[#6B7280]">
+                      <Info className="h-3 w-3" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80">
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm">File Score (0–100)</h4>
+                      <p className="text-sm text-muted-foreground">
+                        This is a normalized risk index for the file (0–100). It's derived from the mix of severities in the file and your file-level multipliers, so you can prioritize where to fix first. It's not a CVSS score.
+                      </p>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+            </div>
         )}
         <p className="text-sm font-medium text-[#6B7280] mt-2">{level} Risk</p>
     </div>

@@ -1,9 +1,43 @@
 import React, { useState } from 'react';
-import { ChevronDown, MapPin, Lightbulb, ExternalLink, Copy } from 'lucide-react';
+import { ChevronDown, MapPin, Lightbulb, ExternalLink, Copy, Info } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { toast } from 'sonner';
 import { deduplicateFindings, getRiskLevelStyles, getCweLink, getCvssScoreColor, GroupedFinding } from '@/utils/findingUtils';
+
+const CVSSInfoPopover = ({ type }: { type: 'base' | 'adjusted' | 'file' }) => {
+  const content = {
+    base: {
+      title: 'CVSS (Base)',
+      text: 'CVSS (Common Vulnerability Scoring System) is a 0.0–10.0 industry standard that rates the intrinsic severity of a vulnerability. The \'Base\' score is unadjusted and does not include your project context.'
+    },
+    adjusted: {
+      title: 'Adjusted',
+      text: 'This score applies your Risk Settings to the base CVSS. We add small context-based adjustments (e.g., internet exposure, PII) and optionally multiply for high-impact environments (e.g., production, internet-facing). Adjusted is capped at 10.0.'
+    },
+    file: {
+      title: 'File Score (0–100)',
+      text: 'This is a normalized risk index for the file (0–100). It\'s derived from the mix of severities in the file and your file-level multipliers, so you can prioritize where to fix first. It\'s not a CVSS score.'
+    }
+  };
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="sm" className="h-4 w-4 p-0 text-muted-foreground hover:text-foreground">
+          <Info className="h-3 w-3" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80">
+        <div className="space-y-2">
+          <h4 className="font-medium text-sm">{content[type].title}</h4>
+          <p className="text-sm text-muted-foreground">{content[type].text}</p>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+};
 
 const normalizeText = (value: any): string => {
     if (!value) return '';
@@ -72,9 +106,10 @@ const FindingItem = ({ finding }: { finding: GroupedFinding }) => {
         const cweDisplayId = cwe?.id ? (String(cwe.id).startsWith('CWE-') ? cwe.id : `CWE-${cwe.id}`) : null;
         const cweLink = cweDisplayId ? getCweLink(cweDisplayId) : null;
 
-        // Get base and adjusted CVSS scores
+        // Get base and adjusted CVSS scores from backend structure
         const baseScore = cvss?.baseScore ?? risk?.original?.cvss;
         const adjustedScore = cvss?.adjustedScore ?? risk?.adjusted?.score;
+        const cvssVector = cvss?.vector ?? risk?.original?.vector;
 
         const copyToClipboard = (text: string) => {
             navigator.clipboard.writeText(text);
@@ -104,6 +139,44 @@ const FindingItem = ({ finding }: { finding: GroupedFinding }) => {
                                  <MapPin className="w-4 h-4" strokeWidth={1.5} />
                                  <span className="font-mono text-xs">{locationStr}</span>
                             </div>
+                            
+                            {/* CVSS Base Score */}
+                            <div className="flex items-center gap-1">
+                                <span className="text-xs text-[#9CA3AF]">CVSS (Base)</span>
+                                <CVSSInfoPopover type="base" />
+                                <Badge variant="outline" className="text-xs">
+                                    {baseScore !== undefined ? Number(baseScore).toFixed(1) : '—'}
+                                </Badge>
+                                {cvssVector && baseScore !== undefined && (
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button variant="ghost" size="sm" className="h-auto p-0 text-xs text-blue-600 hover:text-blue-800">
+                                                View
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-80">
+                                            <div className="space-y-2">
+                                                <h4 className="font-medium text-sm">CVSS Vector</h4>
+                                                <code className="text-xs bg-muted p-2 rounded block">{cvssVector}</code>
+                                            </div>
+                                        </PopoverContent>
+                                    </Popover>
+                                )}
+                            </div>
+                            
+                            {/* Adjusted Score */}
+                            <div className="flex items-center gap-1">
+                                <span className="text-xs text-[#9CA3AF]">Adjusted</span>
+                                <CVSSInfoPopover type="adjusted" />
+                                {adjustedScore !== undefined ? (
+                                    <Badge className={`text-xs px-2 py-1 ${getRiskLevelStyles(severity).badge}`}>
+                                        {Number(adjustedScore).toFixed(1)}
+                                    </Badge>
+                                ) : (
+                                    <Badge variant="outline" className="text-xs">—</Badge>
+                                )}
+                            </div>
+                            
                             <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} strokeWidth={1.5} />
                         </div>
                     </div>
@@ -134,52 +207,87 @@ const FindingItem = ({ finding }: { finding: GroupedFinding }) => {
                                     </InfoBlock>
                                 )}
                                 
-                                {/* CVSS Scores - Enhanced display */}
+                                {/* Enhanced CVSS Scores with Calculation Details */}
                                 {(baseScore !== undefined || adjustedScore !== undefined) && (
-                                    <InfoBlock title="CVSS Scores">
-                                        {baseScore !== undefined && (
-                                            <div className="flex justify-between items-center">
-                                                <span>Base Score:</span>
-                                                <span className={`font-semibold tabular-nums ${getCvssScoreColor(baseScore)}`}>
-                                                    {Number(baseScore).toFixed(1)}
-                                                </span>
-                                            </div>
-                                        )}
-                                        
-                                        {adjustedScore !== undefined && adjustedScore !== baseScore && (
-                                            <div className="flex justify-between items-center">
-                                                <span>Adjusted Score:</span>
-                                                <span className={`font-semibold tabular-nums ${getCvssScoreColor(adjustedScore)}`}>
-                                                    {Number(adjustedScore).toFixed(1)}
-                                                </span>
-                                            </div>
-                                        )}
-                                        
-                                        {(cvss?.vector ?? risk?.original?.vector) && (
-                                            <div className="text-xs text-muted-foreground mt-2">
-                                                <div className="flex items-center gap-2">
-                                                    <span>Vector: {cvss?.vector ?? risk?.original?.vector}</span>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => copyToClipboard(cvss?.vector ?? risk?.original?.vector)}
-                                                    >
-                                                        <Copy className="w-3 h-3" />
-                                                    </Button>
+                                    <InfoBlock title="CVSS Calculation">
+                                        <div className="space-y-3 bg-slate-50 p-3 rounded-md">
+                                            {baseScore !== undefined && (
+                                                <div className="flex justify-between items-center">
+                                                    <span>Base Score:</span>
+                                                    <span className={`font-semibold tabular-nums ${getCvssScoreColor(baseScore)}`}>
+                                                        {Number(baseScore).toFixed(1)}
+                                                    </span>
                                                 </div>
-                                            </div>
-                                        )}
+                                            )}
+                                            
+                                            {cvssVector && (
+                                                <div className="text-xs text-muted-foreground">
+                                                    <div className="flex items-center gap-2">
+                                                        <span>Vector:</span>
+                                                        <code className="bg-white px-1 rounded text-xs">{cvssVector}</code>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => copyToClipboard(cvssVector)}
+                                                        >
+                                                            <Copy className="w-3 h-3" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            
+                                            {adjustedScore !== undefined && (
+                                                <>
+                                                    <div className="border-t pt-2">
+                                                        <div className="text-xs text-muted-foreground mb-1">Adjustments:</div>
+                                                        <div className="ml-2 space-y-1 text-xs">
+                                                            <div className="flex justify-between">
+                                                                <span>Additive:</span>
+                                                                <span className="font-mono">{(risk?.adjusted?.adjustments?.additive || 0) > 0 ? `+${(risk?.adjusted?.adjustments?.additive || 0).toFixed(1)}` : (risk?.adjusted?.adjustments?.additive || 0).toFixed(1)}</span>
+                                                            </div>
+                                                            <div className="flex justify-between">
+                                                                <span>Multiplier:</span>
+                                                                <span className="font-mono">×{(risk?.adjusted?.adjustments?.multiplier || 1).toFixed(1)}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div className="border-t pt-2">
+                                                        <div className="text-xs text-muted-foreground mb-1">Formula:</div>
+                                                        <code className="text-xs bg-white p-1 rounded block">
+                                                            Adjusted = min(10.0, ({baseScore ? Number(baseScore).toFixed(1) : '0.0'} + {(risk?.adjusted?.adjustments?.additive || 0).toFixed(1)}) × {(risk?.adjusted?.adjustments?.multiplier || 1).toFixed(1)})
+                                                        </code>
+                                                        <div className="flex items-center justify-between mt-2 font-medium">
+                                                            <span>Result:</span>
+                                                            <span className={`font-mono tabular-nums ${getCvssScoreColor(adjustedScore)}`}>{Number(adjustedScore).toFixed(1)}</span>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    {baseScore && adjustedScore && Math.abs(baseScore - adjustedScore) < 0.1 && (
+                                                        <div className="text-xs text-muted-foreground italic">
+                                                            (no adjustments applied)
+                                                        </div>
+                                                    )}
+                                                </>
+                                            )}
+                                        </div>
                                     </InfoBlock>
                                 )}
                                 
-                                {/* Risk Adjustments */}
-                                {risk?.adjusted?.adjustments && Object.keys(risk.adjusted.adjustments).length > 0 && (
-                                    <InfoBlock title="Risk Factors Applied">
-                                        <div className="flex flex-wrap gap-1">
-                                            {Object.entries(risk.adjusted.adjustments).map(([factor, value]) => (
-                                                <Badge key={factor} variant="outline" className="text-xs bg-orange-50 text-orange-800 border-orange-200">
-                                                    {factor}: {typeof value === 'number' ? (value > 1 ? `×${value.toFixed(1)}` : `+${value.toFixed(1)}`) : String(value)}
-                                                </Badge>
+                                {/* Applied Factors */}
+                                {((finding as any).factors?.applied?.length > 0 || (risk?.adjusted?.adjustments && Object.keys(risk.adjusted.adjustments).length > 0)) && (
+                                    <InfoBlock title="Applied Factors">
+                                        <div className="space-y-1">
+                                            {(finding as any).factors?.applied?.map((factor, idx) => (
+                                                <div key={idx} className="text-xs bg-orange-50 text-orange-800 px-2 py-1 rounded-md">
+                                                    <span className="font-medium">{factor.name}</span>
+                                                    {factor.impact && <span className="ml-1">— {factor.impact}</span>}
+                                                </div>
+                                            ))}
+                                            {!(finding as any).factors?.applied?.length && risk?.adjusted?.adjustments && Object.entries(risk.adjusted.adjustments).map(([factor, value]) => (
+                                                <div key={factor} className="text-xs bg-orange-50 text-orange-800 px-2 py-1 rounded-md">
+                                                    <span className="font-medium">{factor}</span>: {typeof value === 'number' ? (value > 1 ? `×${value.toFixed(1)}` : `+${value.toFixed(1)}`) : String(value)}
+                                                </div>
                                             ))}
                                         </div>
                                     </InfoBlock>
@@ -220,15 +328,33 @@ const FindingItem = ({ finding }: { finding: GroupedFinding }) => {
                                     </div>
                                 </div>
 
-                                {/* Why it matters section */}
+                                {/* Enhanced Why it matters section */}
                                 <div>
                                     <h4 className="text-[11px] font-semibold uppercase text-[#9CA3AF] mb-2 tracking-[0.05em]">Why This Matters</h4>
-                                    <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
+                                    <div className="bg-amber-50 border border-amber-200 rounded-md p-3 space-y-2">
                                         <p className="text-sm text-amber-900">
                                             This {severity.toLowerCase()} severity vulnerability could be exploited to compromise application security. 
                                             {baseScore && baseScore >= 7.0 && " With a high CVSS score, this should be prioritized for immediate remediation."}
                                             {duplicateCount > 0 && ` This pattern appears in ${duplicateCount + 1} locations, indicating a systematic issue that needs attention.`}
                                         </p>
+                                        <div className="flex flex-wrap gap-2 pt-2">
+                                            {cweDisplayId && cweLink && (
+                                                <a
+                                                    href={cweLink}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800"
+                                                >
+                                                    Learn more about {cweDisplayId}
+                                                    <ExternalLink className="h-3 w-3" />
+                                                </a>
+                                            )}
+                                            {owasp && (
+                                                <span className="text-xs text-muted-foreground">
+                                                    OWASP Category: {normalizeText(owasp.category)}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                            </div>
