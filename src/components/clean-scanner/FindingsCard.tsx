@@ -1,5 +1,9 @@
 import React, { useState } from 'react';
-import { ChevronDown, MapPin, Lightbulb } from 'lucide-react';
+import { ChevronDown, MapPin, Lightbulb, ExternalLink, Copy } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
+import { deduplicateFindings, getRiskLevelStyles, getCweLink, getCvssScoreColor, GroupedFinding } from '@/utils/findingUtils';
 
 const normalizeText = (value: any): string => {
     if (!value) return '';
@@ -17,23 +21,17 @@ const normalizeText = (value: any): string => {
     return String(value);
 };
 
-const SeverityPill = ({ severity }) => {
+const SeverityPill = ({ severity }: { severity: string }) => {
     const s = severity?.toLowerCase() || 'info';
-    const styles = {
-        critical: 'bg-[#FEE2E2] text-[#DC2626]',
-        high: 'bg-[#FED7AA] text-[#EA580C]',
-        medium: 'bg-[#FEF3C7] text-[#D97706]',
-        low: 'bg-[#DBEAFE] text-[#2563EB]',
-        info: 'bg-[#F3F4F6] text-[#6B7280]'
-    };
+    const styles = getRiskLevelStyles(s);
     return (
-        <div className={`rounded-full px-2.5 py-1 text-xs font-medium ${styles[s]}`}>
+        <Badge variant="outline" className={`${styles.badge} border-0`}>
             {severity}
-        </div>
+        </Badge>
     );
 };
 
-const InfoBlock = ({ title, children }) => (
+const InfoBlock = ({ title, children }: { title: string; children: React.ReactNode }) => (
     <div>
         <h4 className="text-[11px] font-semibold uppercase text-[#9CA3AF] mb-2 tracking-[0.05em]">{title}</h4>
         <div className="text-sm text-[#374151] space-y-1">
@@ -42,7 +40,7 @@ const InfoBlock = ({ title, children }) => (
     </div>
 );
 
-const FindingItem = ({ finding }) => {
+const FindingItem = ({ finding }: { finding: GroupedFinding }) => {
     const [isOpen, setIsOpen] = useState(false);
     
     // Add error boundary and safe data extraction
@@ -55,7 +53,9 @@ const FindingItem = ({ finding }) => {
             remediation: rawRemediation,
             location: rawLocation, start,
             code, extractedCode, codeSnippet, extra,
-            risk
+            risk,
+            duplicateLines = [],
+            duplicateCount = 0
         } = finding || {};
 
         const title = rawTitle || name || check_id || message || "Security Vulnerability";
@@ -70,16 +70,16 @@ const FindingItem = ({ finding }) => {
         const vulnerableCode = code || extractedCode || codeSnippet || extra?.lines || '';
 
         const cweDisplayId = cwe?.id ? (String(cwe.id).startsWith('CWE-') ? cwe.id : `CWE-${cwe.id}`) : null;
+        const cweLink = cweDisplayId ? getCweLink(cweDisplayId) : null;
 
-        // Log finding structure for debugging
-        console.log('🔍 Rendering finding:', {
-            title,
-            severity,
-            hasRisk: !!risk,
-            riskStructure: risk ? Object.keys(risk) : null,
-            hasCvss: !!cvss,
-            cvssStructure: cvss ? Object.keys(cvss) : null
-        });
+        // Get base and adjusted CVSS scores
+        const baseScore = cvss?.baseScore ?? risk?.original?.cvss;
+        const adjustedScore = cvss?.adjustedScore ?? risk?.adjusted?.score;
+
+        const copyToClipboard = (text: string) => {
+            navigator.clipboard.writeText(text);
+            toast.success('Copied to clipboard');
+        };
 
         return (
             <div className={`bg-white rounded-xl transition-all duration-150 ${isOpen ? 'shadow-[0_4px_12px_rgba(0,0,0,0.08)]' : 'shadow-[0_1px_3px_rgba(0,0,0,0.05)]'}`}>
@@ -90,7 +90,14 @@ const FindingItem = ({ finding }) => {
                     <div className="flex items-center justify-between w-full text-left">
                         <div className="flex items-center gap-4">
                             <SeverityPill severity={severity} />
-                            <span className="font-medium text-[#374151]">{title}</span>
+                            <div className="flex flex-col items-start">
+                                <span className="font-medium text-[#374151]">{title}</span>
+                                {duplicateCount > 0 && (
+                                    <span className="text-xs text-[#9CA3AF] mt-1">
+                                        +{duplicateCount} more at lines {duplicateLines.join(', ')}
+                                    </span>
+                                )}
+                            </div>
                         </div>
                         <div className="flex items-center gap-4">
                             <div className="flex items-center gap-2 text-sm text-[#6B7280]">
@@ -106,50 +113,73 @@ const FindingItem = ({ finding }) => {
                        <div className="pt-6 grid grid-cols-1 md:grid-cols-3 gap-8">
                             <div className="md:col-span-1 space-y-6">
                                 {cweDisplayId && (
-                                    <InfoBlock title="CWE">
-                                        <p><span className="font-semibold">{cweDisplayId}</span>: {normalizeText(cwe?.name) || 'Security Weakness'}</p>
+                                    <InfoBlock title="CWE Classification">
+                                        <div className="flex items-center justify-between">
+                                            <p><span className="font-semibold">{cweDisplayId}</span>: {normalizeText(cwe?.name) || 'Security Weakness'}</p>
+                                            {cweLink && (
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="sm"
+                                                    onClick={() => window.open(cweLink, '_blank')}
+                                                >
+                                                    <ExternalLink className="w-3 h-3" />
+                                                </Button>
+                                            )}
+                                        </div>
                                     </InfoBlock>
                                 )}
                                 {owasp && (
-                                    <InfoBlock title="OWASP">
+                                    <InfoBlock title="OWASP Category">
                                         <p><span className="font-semibold">{normalizeText(owasp.category)}</span> – {normalizeText(owasp.title)}</p>
                                     </InfoBlock>
                                 )}
                                 
-                                {/* CVSS Scores - Handle both original and adjusted */}
-                                {(cvss && (cvss.baseScore || cvss.adjustedScore || cvss.vector)) || (risk?.original?.cvss || risk?.adjusted?.score) ? (
-                                    <InfoBlock title="CVSS Score">
-                                        {/* Base CVSS Score */}
-                                        {(cvss?.baseScore ?? risk?.original?.cvss) !== undefined && (
-                                            <p>Base: <span className="font-semibold tabular-nums">
-                                                {Number(cvss?.baseScore ?? risk?.original?.cvss).toFixed(1)}
-                                            </span></p>
+                                {/* CVSS Scores - Enhanced display */}
+                                {(baseScore !== undefined || adjustedScore !== undefined) && (
+                                    <InfoBlock title="CVSS Scores">
+                                        {baseScore !== undefined && (
+                                            <div className="flex justify-between items-center">
+                                                <span>Base Score:</span>
+                                                <span className={`font-semibold tabular-nums ${getCvssScoreColor(baseScore)}`}>
+                                                    {Number(baseScore).toFixed(1)}
+                                                </span>
+                                            </div>
                                         )}
                                         
-                                        {/* Adjusted CVSS Score */}
-                                        {(cvss?.adjustedScore ?? risk?.adjusted?.score) !== undefined && (
-                                            <p>Adjusted: <span className="font-semibold tabular-nums text-orange-600">
-                                                {Number(cvss?.adjustedScore ?? risk?.adjusted?.score).toFixed(1)}
-                                            </span></p>
+                                        {adjustedScore !== undefined && adjustedScore !== baseScore && (
+                                            <div className="flex justify-between items-center">
+                                                <span>Adjusted Score:</span>
+                                                <span className={`font-semibold tabular-nums ${getCvssScoreColor(adjustedScore)}`}>
+                                                    {Number(adjustedScore).toFixed(1)}
+                                                </span>
+                                            </div>
                                         )}
                                         
-                                        {/* Vector */}
                                         {(cvss?.vector ?? risk?.original?.vector) && (
-                                            <p className="text-xs text-muted-foreground">
-                                                Vector: {cvss?.vector ?? risk?.original?.vector}
-                                            </p>
+                                            <div className="text-xs text-muted-foreground mt-2">
+                                                <div className="flex items-center gap-2">
+                                                    <span>Vector: {cvss?.vector ?? risk?.original?.vector}</span>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => copyToClipboard(cvss?.vector ?? risk?.original?.vector)}
+                                                    >
+                                                        <Copy className="w-3 h-3" />
+                                                    </Button>
+                                                </div>
+                                            </div>
                                         )}
                                     </InfoBlock>
-                                ) : null}
+                                )}
                                 
                                 {/* Risk Adjustments */}
                                 {risk?.adjusted?.adjustments && Object.keys(risk.adjusted.adjustments).length > 0 && (
                                     <InfoBlock title="Risk Factors Applied">
                                         <div className="flex flex-wrap gap-1">
                                             {Object.entries(risk.adjusted.adjustments).map(([factor, value]) => (
-                                                <div key={factor} className="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded">
+                                                <Badge key={factor} variant="outline" className="text-xs bg-orange-50 text-orange-800 border-orange-200">
                                                     {factor}: {typeof value === 'number' ? (value > 1 ? `×${value.toFixed(1)}` : `+${value.toFixed(1)}`) : String(value)}
-                                                </div>
+                                                </Badge>
                                             ))}
                                         </div>
                                     </InfoBlock>
@@ -164,8 +194,16 @@ const FindingItem = ({ finding }) => {
                                 {vulnerableCode && (
                                     <div>
                                          <h4 className="text-[11px] font-semibold uppercase text-[#9CA3AF] mb-2 tracking-[0.05em]">Vulnerable Code</h4>
-                                        <div className="bg-[#F9FAFB] rounded-md p-3">
-                                            <pre className="text-xs font-mono text-[#374151] overflow-x-auto">
+                                        <div className="bg-[#F9FAFB] rounded-md p-3 relative">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="absolute top-2 right-2"
+                                                onClick={() => copyToClipboard(vulnerableCode)}
+                                            >
+                                                <Copy className="w-3 h-3" />
+                                            </Button>
+                                            <pre className="text-xs font-mono text-[#374151] overflow-x-auto pr-8">
                                                 <code>{vulnerableCode}</code>
                                             </pre>
                                         </div>
@@ -177,7 +215,21 @@ const FindingItem = ({ finding }) => {
                                         <Lightbulb className="w-4 h-4 text-[#AFCB0E]" strokeWidth={1.5} /> 
                                         Recommended Fix
                                     </h4>
-                                    <p className="text-sm text-[#374151]">{remediation}</p>
+                                    <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                                        <p className="text-sm text-blue-900">{remediation}</p>
+                                    </div>
+                                </div>
+
+                                {/* Why it matters section */}
+                                <div>
+                                    <h4 className="text-[11px] font-semibold uppercase text-[#9CA3AF] mb-2 tracking-[0.05em]">Why This Matters</h4>
+                                    <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
+                                        <p className="text-sm text-amber-900">
+                                            This {severity.toLowerCase()} severity vulnerability could be exploited to compromise application security. 
+                                            {baseScore && baseScore >= 7.0 && " With a high CVSS score, this should be prioritized for immediate remediation."}
+                                            {duplicateCount > 0 && ` This pattern appears in ${duplicateCount + 1} locations, indicating a systematic issue that needs attention.`}
+                                        </p>
+                                    </div>
                                 </div>
                            </div>
                        </div>
@@ -195,23 +247,37 @@ const FindingItem = ({ finding }) => {
     }
 };
 
-
-export default function FindingsCard({ findings = [] }) {
+export default function FindingsCard({ findings = [] }: { findings: any[] }) {
     if (!findings || findings.length === 0) {
         return (
              <div className="bg-white p-12 text-center rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
-                <h3 className="text-lg font-medium text-[#374151]">No Vulnerabilities Found</h3>
-                <p className="mt-2 text-[#6B7280]">Great! Your code appears to be secure.</p>
+                <div className="w-16 h-16 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
+                    <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                </div>
+                <h3 className="text-lg font-medium text-[#374151] mb-2">No Vulnerabilities Found</h3>
+                <p className="text-[#6B7280]">Great! Your code appears to be secure. Keep following secure coding practices.</p>
             </div>
         );
     }
 
+    const deduplicated = deduplicateFindings(findings);
+
     return (
         <div>
-            <h3 className="text-sm font-medium uppercase tracking-wider text-[#6B7280] mb-4">Security Findings ({findings.length})</h3>
-            <div className="space-y-2">
-                {findings.map((finding, index) => (
-                    <FindingItem finding={finding} key={index} />
+            <div className="flex justify-between items-center mb-4">
+                <h3 className="text-sm font-medium uppercase tracking-wider text-[#6B7280]">Security Findings</h3>
+                <div className="flex items-center gap-4 text-xs text-[#9CA3AF]">
+                    <span>{deduplicated.length} unique issues</span>
+                    {findings.length !== deduplicated.length && (
+                        <span className="text-amber-600">({findings.length - deduplicated.length} duplicates collapsed)</span>
+                    )}
+                </div>
+            </div>
+            <div className="space-y-2 max-w-4xl">
+                {deduplicated.map((finding, index) => (
+                    <FindingItem finding={finding} key={finding.id || index} />
                 ))}
             </div>
         </div>

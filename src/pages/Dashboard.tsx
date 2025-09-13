@@ -10,7 +10,9 @@ import { RiskSettingsDrawer } from "@/components/RiskSettingsDrawer";
 import { useRiskSettings } from "@/hooks/useRiskSettings";
 import { AlertCircle, Settings } from "lucide-react";
 import { runConnectionTest } from "@/utils/testConnection";
+import { formatScanTime, getRiskLevelStyles } from "@/utils/findingUtils";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { toast } from "sonner";
 
 const API_BASE_URL = 'https://semgrep-backend-production.up.railway.app';
 
@@ -53,7 +55,8 @@ export default function Dashboard() {
     const [error, setError] = useState(null);
     const [progress, setProgress] = useState(0);
     const [backendStatus, setBackendStatus] = useState('checking');
-    const { getRiskConfig, getRiskContext } = useRiskSettings();
+    const { getRiskConfig, getRiskContext, saveLastScan } = useRiskSettings();
+    const [scanStartTime, setScanStartTime] = useState<number>(0);
 
     // Test backend connection on component mount
     useEffect(() => {
@@ -88,6 +91,7 @@ export default function Dashboard() {
             }
 
             console.log('🔍 Starting scan for file:', options.file.name);
+            setScanStartTime(Date.now());
             
             // Get current risk settings
             const riskConfig = getRiskConfig();
@@ -95,6 +99,9 @@ export default function Dashboard() {
             
             console.log('🎯 Using risk config:', riskConfig);
             console.log('🌍 Using context:', context);
+            
+            // Save scan for re-run capability
+            saveLastScan('/scan-file', { file: options.file, riskConfig, context });
             
             const response = await scanFileForDashboard(options.file, riskConfig, context);
 
