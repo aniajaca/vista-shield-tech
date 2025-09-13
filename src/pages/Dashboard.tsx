@@ -10,6 +10,7 @@ import { RiskSettingsDrawer } from "@/components/RiskSettingsDrawer";
 import { useRiskSettings } from "@/hooks/useRiskSettings";
 import { AlertCircle, Settings } from "lucide-react";
 import { runConnectionTest } from "@/utils/testConnection";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 const API_BASE_URL = 'https://semgrep-backend-production.up.railway.app';
 
@@ -100,9 +101,19 @@ export default function Dashboard() {
             if (response.success) {
                 console.log('📊 Setting scan result:', response.data);
                 
+                // Debug: Log the full response structure
+                console.log('🔍 Full API response structure:', {
+                    score: response.data.score,
+                    risk: response.data.risk,
+                    riskAssessment: response.data.riskAssessment,
+                    findings: response.data.findings?.length || 0,
+                    performance: response.data.performance
+                });
+                
                 // Debug: Log findings data structure for verification
                 if (response.data.findings && response.data.findings.length > 0) {
                     console.log('🔍 First finding structure:', response.data.findings[0]);
+                    console.log('🔍 Findings sample keys:', Object.keys(response.data.findings[0]));
                 }
                 
                 setScanResult(response.data);
@@ -205,41 +216,49 @@ export default function Dashboard() {
                     )}
 
                     {hasResults && (
-                        <div className="space-y-8">
-                            <RiskOverviewCard
-                                riskAssessment={{
-                                    riskScore: scanResult.score?.final || scanResult.riskAssessment?.riskScore,
-                                    riskLevel: scanResult.risk?.level || scanResult.riskAssessment?.riskLevel,
-                                    findingsBreakdown: scanResult.riskAssessment?.severityDistribution || scanResult.riskAssessment?.findingsBreakdown,
-                                    
-                                    // File-level adjustments
-                                    normalizedScore: scanResult.score?.normalized || scanResult.riskAssessment?.normalizedScore,
-                                    finalScore: scanResult.score?.final || scanResult.riskAssessment?.finalScore || scanResult.riskAssessment?.riskScore,
-                                    multiplier: scanResult.fileScore?.multiplier || scanResult.riskAssessment?.multiplier,
-                                    priority: scanResult.risk?.priority?.level || scanResult.riskAssessment?.priority,
-                                    confidence: scanResult.riskAssessment?.confidence,
-                                    
-                                    // Applied factors from file or context
-                                    appliedFactors: scanResult.appliedFactors || scanResult.riskAssessment?.appliedFactors || 
-                                        (scanResult.context?.factors ? Object.entries(scanResult.context.factors)
-                                            .filter(([_, config]: any) => config.enabled)
-                                            .map(([name, config]: any) => ({
-                                                name,
-                                                value: config.weight || config.value || 1,
-                                                type: config.weight ? 'multiplier' : 'additive',
-                                                description: config.description
-                                            })) : [])
-                                }}
-                                performance={scanResult.performance}
-                            />
-                            <FindingsCard
-                                findings={scanResult.findings || []}
-                            />
-                            <ExportSection 
-                                findings={scanResult.findings || []}
-                                riskAssessment={scanResult.riskAssessment || {}}
-                            />
-                        </div>
+                        <ErrorBoundary>
+                            <div className="space-y-8">
+                                <ErrorBoundary>
+                                    <RiskOverviewCard
+                                        riskAssessment={{
+                                            riskScore: scanResult.score?.final || scanResult.riskAssessment?.riskScore,
+                                            riskLevel: scanResult.risk?.level || scanResult.riskAssessment?.riskLevel,
+                                            findingsBreakdown: scanResult.riskAssessment?.severityDistribution || scanResult.riskAssessment?.findingsBreakdown,
+                                            
+                                            // File-level adjustments
+                                            normalizedScore: scanResult.score?.normalized || scanResult.riskAssessment?.normalizedScore,
+                                            finalScore: scanResult.score?.final || scanResult.riskAssessment?.finalScore || scanResult.riskAssessment?.riskScore,
+                                            multiplier: scanResult.fileScore?.multiplier || scanResult.riskAssessment?.multiplier,
+                                            priority: scanResult.risk?.priority?.level || scanResult.riskAssessment?.priority,
+                                            confidence: scanResult.riskAssessment?.confidence,
+                                            
+                                            // Applied factors from file or context
+                                            appliedFactors: scanResult.appliedFactors || scanResult.riskAssessment?.appliedFactors || 
+                                                (scanResult.context?.factors ? Object.entries(scanResult.context.factors)
+                                                    .filter(([_, config]: any) => config.enabled)
+                                                    .map(([name, config]: any) => ({
+                                                        name,
+                                                        value: config.weight || config.value || 1,
+                                                        type: config.weight ? 'multiplier' : 'additive',
+                                                        description: config.description
+                                                    })) : [])
+                                        }}
+                                        performance={scanResult.performance}
+                                    />
+                                </ErrorBoundary>
+                                <ErrorBoundary>
+                                    <FindingsCard
+                                        findings={scanResult.findings || []}
+                                    />
+                                </ErrorBoundary>
+                                <ErrorBoundary>
+                                    <ExportSection 
+                                        findings={scanResult.findings || []}
+                                        riskAssessment={scanResult.riskAssessment || {}}
+                                    />
+                                </ErrorBoundary>
+                            </div>
+                        </ErrorBoundary>
                     )}
                  </main>
 
