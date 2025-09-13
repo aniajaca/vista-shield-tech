@@ -250,9 +250,27 @@ export default function Dependencies() {
                         <div className="space-y-8">
                             <DependenciesRiskOverviewCard
                                 riskAssessment={{
-                                    riskScore: scanResult.risk_score || 0,
-                                    riskLevel: scanResult.risk_level || 'Low',
-                                    findingsBreakdown: scanResult.stats || {}
+                                    riskScore: scanResult.risk_score || scanResult.riskScore || 0,
+                                    riskLevel: scanResult.risk_level || scanResult.riskLevel || 'Low',
+                                    findingsBreakdown: scanResult.stats || scanResult.findingsBreakdown || {},
+                                    
+                                    // File-level adjustments for dependencies
+                                    normalizedScore: scanResult.normalizedScore,
+                                    finalScore: scanResult.finalScore || scanResult.risk_score || scanResult.riskScore,
+                                    multiplier: scanResult.multiplier,
+                                    priority: scanResult.priority,
+                                    confidence: scanResult.confidence,
+                                    
+                                    // Applied factors
+                                    appliedFactors: scanResult.appliedFactors || 
+                                        (scanResult.context?.factors ? Object.entries(scanResult.context.factors)
+                                            .filter(([_, config]: any) => config.enabled)
+                                            .map(([name, config]: any) => ({
+                                                name,
+                                                value: config.weight || config.value || 1,
+                                                type: config.weight ? 'multiplier' : 'additive',
+                                                description: config.description
+                                            })) : [])
                                 }}
                                 performance={{
                                     scanTime: scanResult.scan_time,

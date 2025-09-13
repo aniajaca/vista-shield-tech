@@ -277,7 +277,29 @@ export default function Dashboard() {
                     {hasResults && (
                         <div className="space-y-8">
                             <RiskOverviewCard
-                                riskAssessment={scanResult.riskAssessment}
+                                riskAssessment={{
+                                    riskScore: scanResult.riskAssessment?.riskScore,
+                                    riskLevel: scanResult.riskAssessment?.riskLevel,
+                                    findingsBreakdown: scanResult.riskAssessment?.findingsBreakdown,
+                                    
+                                    // File-level adjustments
+                                    normalizedScore: scanResult.fileScore?.normalized || scanResult.riskAssessment?.normalizedScore,
+                                    finalScore: scanResult.fileScore?.final || scanResult.riskAssessment?.finalScore || scanResult.riskAssessment?.riskScore,
+                                    multiplier: scanResult.fileScore?.multiplier || scanResult.riskAssessment?.multiplier,
+                                    priority: scanResult.riskAssessment?.priority,
+                                    confidence: scanResult.riskAssessment?.confidence,
+                                    
+                                    // Applied factors from file or context
+                                    appliedFactors: scanResult.appliedFactors || scanResult.riskAssessment?.appliedFactors || 
+                                        (scanResult.context?.factors ? Object.entries(scanResult.context.factors)
+                                            .filter(([_, config]: any) => config.enabled)
+                                            .map(([name, config]: any) => ({
+                                                name,
+                                                value: config.weight || config.value || 1,
+                                                type: config.weight ? 'multiplier' : 'additive',
+                                                description: config.description
+                                            })) : [])
+                                }}
                                 performance={scanResult.performance}
                             />
                             <FindingsCard
