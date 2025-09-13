@@ -3,6 +3,27 @@ import { ChevronDown, MapPin, ExternalLink, Search, Filter } from 'lucide-react'
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
+// Safe formatter to render possibly nested objects as readable text
+const toText = (val: any): string => {
+  if (val == null) return '';
+  const t = typeof val;
+  if (t === 'string' || t === 'number' || t === 'boolean') return String(val);
+  if (Array.isArray(val)) return val.map(toText).filter(Boolean).join(', ');
+  if (t === 'object') {
+    const preferred = ['strategy', 'fix', 'recommendation', 'text', 'message', 'summary', 'details', 'explanation', 'reason'];
+    for (const k of preferred) {
+      if (k in val && (val as any)[k] != null) return toText((val as any)[k]);
+    }
+    try {
+      const parts = Object.values(val).map(toText).filter(Boolean);
+      if (parts.length) return parts.join(' ');
+      return JSON.stringify(val);
+    } catch {
+      return '';
+    }
+  }
+  return '';
+};
 const SeverityPill = ({ severity }) => {
     const s = severity?.toLowerCase() || 'low';
     const styles = {
@@ -40,6 +61,11 @@ const VulnerabilityItem = ({ vulnerability }) => {
     const recommendation = vulnerability.recommendation || vulnerability.remediation || vulnerability.vulnerability?.remediation || vulnerability.fix || 'Update to a secure version';
     const advisoryUrl = vulnerability.advisory_url || vulnerability.vulnerability?.advisory_url || vulnerability.url || vulnerability.reference || vulnerability.vulnerability?.url;
 
+    const descriptionText = toText(description);
+    const recommendationText = toText(recommendation);
+    const affectedRangesText = toText(affectedRanges);
+    const cveText = toText(cve);
+
     const displayTitle = `${packageName || 'Unknown'}@${currentVersion || 'unknown'} — ${title || 'Advisory'}`;
 
     return (
@@ -67,10 +93,10 @@ const VulnerabilityItem = ({ vulnerability }) => {
                    <div className="pt-6 grid grid-cols-1 md:grid-cols-3 gap-8">
                         <div className="md:col-span-1 space-y-6">
                             <InfoBlock title="CVE">
-                                <p><span className="font-semibold">{cve || 'N/A'}</span></p>
+                                <p><span className="font-semibold">{cveText || 'N/A'}</span></p>
                             </InfoBlock>
                             <InfoBlock title="Affected Versions">
-                                <p><span className="font-semibold">{affectedRanges || 'N/A'}</span></p>
+                                <p><span className="font-semibold">{affectedRangesText || 'N/A'}</span></p>
                             </InfoBlock>
                             
                             {advisoryUrl && (
@@ -89,11 +115,11 @@ const VulnerabilityItem = ({ vulnerability }) => {
                        
                        <div className="md:col-span-2 space-y-6">
                             <InfoBlock title="Description">
-                                <p>{description}</p>
+                                <p>{descriptionText}</p>
                             </InfoBlock>
 
                             <InfoBlock title="Recommended Fix">
-                                <p>{recommendation || 'Update to a secure version'}</p>
+                                <p>{recommendationText || 'Update to a secure version'}</p>
                             </InfoBlock>
                        </div>
                    </div>
