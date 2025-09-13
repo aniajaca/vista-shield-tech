@@ -10,7 +10,6 @@ import { RiskSettingsDrawer } from "@/components/RiskSettingsDrawer";
 import { useRiskSettings } from "@/hooks/useRiskSettings";
 import { AlertCircle, Settings } from "lucide-react";
 import { runConnectionTest } from "@/utils/testConnection";
-
 const API_BASE_URL = 'https://semgrep-backend-production.up.railway.app';
 
 /**
@@ -18,18 +17,19 @@ const API_BASE_URL = 'https://semgrep-backend-production.up.railway.app';
  */
 async function scanFile(file, riskConfig = null, context = null) {
   try {
-    console.log('📄 Reading file content:', { name: file.name, size: file.size });
-    
+    console.log('📄 Reading file content:', {
+      name: file.name,
+      size: file.size
+    });
+
     // Read file content as text
     const code = await file.text();
-    
     console.log('🚀 Sending to /scan-code endpoint with JSON payload');
-    
     const payload: any = {
       code: code,
       filename: file.name
     };
-    
+
     // Add risk config and context if provided
     if (riskConfig) {
       payload.riskConfig = riskConfig;
@@ -37,30 +37,25 @@ async function scanFile(file, riskConfig = null, context = null) {
     if (context) {
       payload.context = context;
     }
-    
     console.log('📦 Payload with risk settings:', payload);
-
     const response = await fetch(`${API_BASE_URL}/scan-code`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json',
+        'Accept': 'application/json'
       },
       mode: 'cors',
       body: JSON.stringify(payload)
     });
-
     console.log('📨 Response status:', response.status, response.statusText);
-
     if (!response.ok) {
       const errorText = await response.text();
       console.error('❌ Error response:', errorText);
       throw new Error(`HTTP ${response.status}: ${errorText}`);
     }
-
     const data = await response.json();
     console.log('✅ Scan successful, received data:', data);
-    
+
     // Debug the response structure
     console.log('🔍 API Response Structure:');
     console.log('- Type:', typeof data);
@@ -68,19 +63,16 @@ async function scanFile(file, riskConfig = null, context = null) {
     console.log('- findings:', data.findings);
     console.log('- findings type:', typeof data.findings);
     console.log('- findings length:', data.findings?.length);
-    
     if (data.findings && data.findings.length > 0) {
       console.log('- First finding:', data.findings[0]);
       console.log('- First finding keys:', Object.keys(data.findings[0]));
     }
-    
     return {
       success: true,
       data: data
     };
   } catch (error) {
     console.error('❌ Scan failed:', error);
-    
     return {
       success: false,
       error: error.message || 'Code scanning failed',
@@ -91,117 +83,104 @@ async function scanFile(file, riskConfig = null, context = null) {
     };
   }
 }
-
 export default function Dashboard() {
-    const [isLoading, setIsLoading] = useState(false);
-    const [scanResult, setScanResult] = useState(null);
-    const [error, setError] = useState(null);
-    const [progress, setProgress] = useState(0);
-    const [backendStatus, setBackendStatus] = useState('checking');
-    const { getRiskConfig, getRiskContext } = useRiskSettings();
+  const [isLoading, setIsLoading] = useState(false);
+  const [scanResult, setScanResult] = useState(null);
+  const [error, setError] = useState(null);
+  const [progress, setProgress] = useState(0);
+  const [backendStatus, setBackendStatus] = useState('checking');
+  const {
+    getRiskConfig,
+    getRiskContext
+  } = useRiskSettings();
 
-    // Test backend connection on component mount
-    useEffect(() => {
-        const testBackend = async () => {
-            console.log('🔍 Testing backend connection...');
-            const isConnected = await runConnectionTest();
-            setBackendStatus(isConnected ? 'connected' : 'disconnected');
-        };
-        
-        testBackend();
-    }, []);
-
-    const handleScan = async (options) => {
-        setIsLoading(true);
-        setError(null);
-        setScanResult(null);
-        setProgress(0);
-
-        const progressInterval = setInterval(() => {
-            setProgress(prev => {
-                if (prev >= 95) {
-                    clearInterval(progressInterval);
-                    return prev;
-                }
-                return prev + 5;
-            });
-        }, 200);
-
-        try {
-            if (!options.file) {
-                throw new Error("No file selected for scanning.");
-            }
-
-            console.log('🔍 Starting scan for file:', options.file.name);
-            
-            // Get current risk settings
-            const riskConfig = getRiskConfig();
-            const context = getRiskContext();
-            
-            console.log('🎯 Using risk config:', riskConfig);
-            console.log('🌍 Using context:', context);
-            
-            const response = await scanFile(options.file, riskConfig, context);
-
-            if (response.success) {
-                console.log('📊 Setting scan result:', response.data);
-                
-                // Debug: Log findings data structure for verification
-                if (response.data.findings && response.data.findings.length > 0) {
-                    console.log('🔍 First finding structure:', response.data.findings[0]);
-                    
-                    // Check for missing or fallback data
-                    response.data.findings.forEach((finding, index) => {
-                        const issues = [];
-                        if (!finding.title && !finding.name && !finding.check_id) {
-                            issues.push('Missing specific vulnerability name');
-                        }
-                        if (!finding.cwe || !finding.cwe.description) {
-                            issues.push('Missing CWE details');
-                        }
-                        if (!finding.owasp || !finding.owasp.category) {
-                            issues.push('Missing OWASP classification');
-                        }
-                        if (!finding.cvss || (!finding.cvss.baseScore && !finding.cvss.adjustedScore)) {
-                            issues.push('Missing CVSS scores');
-                        }
-                        if (!finding.businessImpact) {
-                            issues.push('Missing business impact');
-                        }
-                        
-                        if (issues.length > 0) {
-                            console.warn(`🚨 Finding ${index + 1} missing data:`, issues, finding);
-                        }
-                    });
-                }
-                
-                setScanResult(response.data);
-                
-                // Save to database
-                await ScanResult.create({
-                    ...response.data,
-                    fileName: options.file.name,
-                });
-                
-                console.log('💾 Scan result saved to database');
-            } else {
-                throw new Error(response.error);
-            }
-
-        } catch (err) {
-            console.error('🚨 Scan process failed:', err);
-            setError(`Failed to complete scan: ${err.message}`);
-        } finally {
-            clearInterval(progressInterval);
-            setProgress(100);
-            setTimeout(() => setIsLoading(false), 500);
-        }
+  // Test backend connection on component mount
+  useEffect(() => {
+    const testBackend = async () => {
+      console.log('🔍 Testing backend connection...');
+      const isConnected = await runConnectionTest();
+      setBackendStatus(isConnected ? 'connected' : 'disconnected');
     };
+    testBackend();
+  }, []);
+  const handleScan = async options => {
+    setIsLoading(true);
+    setError(null);
+    setScanResult(null);
+    setProgress(0);
+    const progressInterval = setInterval(() => {
+      setProgress(prev => {
+        if (prev >= 95) {
+          clearInterval(progressInterval);
+          return prev;
+        }
+        return prev + 5;
+      });
+    }, 200);
+    try {
+      if (!options.file) {
+        throw new Error("No file selected for scanning.");
+      }
+      console.log('🔍 Starting scan for file:', options.file.name);
 
-    const hasResults = scanResult && !isLoading;
+      // Get current risk settings
+      const riskConfig = getRiskConfig();
+      const context = getRiskContext();
+      console.log('🎯 Using risk config:', riskConfig);
+      console.log('🌍 Using context:', context);
+      const response = await scanFile(options.file, riskConfig, context);
+      if (response.success) {
+        console.log('📊 Setting scan result:', response.data);
 
-    return (
-        <div className="text-[#374151]">
+        // Debug: Log findings data structure for verification
+        if (response.data.findings && response.data.findings.length > 0) {
+          console.log('🔍 First finding structure:', response.data.findings[0]);
+
+          // Check for missing or fallback data
+          response.data.findings.forEach((finding, index) => {
+            const issues = [];
+            if (!finding.title && !finding.name && !finding.check_id) {
+              issues.push('Missing specific vulnerability name');
+            }
+            if (!finding.cwe || !finding.cwe.description) {
+              issues.push('Missing CWE details');
+            }
+            if (!finding.owasp || !finding.owasp.category) {
+              issues.push('Missing OWASP classification');
+            }
+            if (!finding.cvss || !finding.cvss.baseScore && !finding.cvss.adjustedScore) {
+              issues.push('Missing CVSS scores');
+            }
+            if (!finding.businessImpact) {
+              issues.push('Missing business impact');
+            }
+            if (issues.length > 0) {
+              console.warn(`🚨 Finding ${index + 1} missing data:`, issues, finding);
+            }
+          });
+        }
+        setScanResult(response.data);
+
+        // Save to database
+        await ScanResult.create({
+          ...response.data,
+          fileName: options.file.name
+        });
+        console.log('💾 Scan result saved to database');
+      } else {
+        throw new Error(response.error);
+      }
+    } catch (err) {
+      console.error('🚨 Scan process failed:', err);
+      setError(`Failed to complete scan: ${err.message}`);
+    } finally {
+      clearInterval(progressInterval);
+      setProgress(100);
+      setTimeout(() => setIsLoading(false), 500);
+    }
+  };
+  const hasResults = scanResult && !isLoading;
+  return <div className="text-[#374151]">
             <style>{`
                 @import url('https://rsms.me/inter/inter.css');
                 html { font-family: 'Inter', sans-serif; }
@@ -221,11 +200,9 @@ export default function Dashboard() {
                 }
             `}</style>
 
-            {isLoading && (
-                <div className="progress-bar">
+            {isLoading && <div className="progress-bar">
                     <Progress value={progress} className="w-full h-full" />
-                </div>
-            )}
+                </div>}
             
             <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-12 py-12">
             
@@ -233,15 +210,10 @@ export default function Dashboard() {
                     <div className="flex items-baseline gap-2">
                         <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/fc56c3a44_image.png" alt="Neperia Logo" className="h-5 w-5 grayscale opacity-30" />
                         <h1 className="text-lg font-semibold text-[#374151]">NEPERIA</h1>
-                        <span className="text-sm text-[#9CA3AF]">Code Guardian</span>
-                        <div className={`ml-4 px-2 py-1 rounded-full text-xs font-medium ${
-                            backendStatus === 'connected' ? 'bg-green-100 text-green-700' :
-                            backendStatus === 'disconnected' ? 'bg-red-100 text-red-700' :
-                            'bg-yellow-100 text-yellow-700'
-                        }`}>
-                            {backendStatus === 'connected' ? '● Backend Online' : 
-                             backendStatus === 'disconnected' ? '● Backend Offline' : 
-                             '● Checking...'}
+                        <span className="text-sm text-[#9CA3AF]">Code Scanner
+          </span>
+                        <div className={`ml-4 px-2 py-1 rounded-full text-xs font-medium ${backendStatus === 'connected' ? 'bg-green-100 text-green-700' : backendStatus === 'disconnected' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                            {backendStatus === 'connected' ? '● Backend Online' : backendStatus === 'disconnected' ? '● Backend Offline' : '● Checking...'}
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -251,50 +223,30 @@ export default function Dashboard() {
                                 Risk Settings
                             </Button>
                         </RiskSettingsDrawer>
-                        {hasResults && (
-                            <Button 
-                                onClick={() => setScanResult(null)}
-                                variant="ghost"
-                                className="text-sm font-medium text-[#6B7280] hover:text-[#AFCB0E] hover:bg-[#F9FAFB] transition-colors duration-150">
+                        {hasResults && <Button onClick={() => setScanResult(null)} variant="ghost" className="text-sm font-medium text-[#6B7280] hover:text-[#AFCB0E] hover:bg-[#F9FAFB] transition-colors duration-150">
                                 Scan another file
-                            </Button>
-                        )}
+                            </Button>}
                     </div>
                 </div>
 
                 <main className="space-y-8">
-                    {!hasResults && (
-                        <ScannerInterface onScan={handleScan} isLoading={isLoading} />
-                    )}
+                    {!hasResults && <ScannerInterface onScan={handleScan} isLoading={isLoading} />}
 
-                    {error && (
-                        <div className="bg-red-50 text-red-700 rounded-lg p-4 flex items-center gap-3">
+                    {error && <div className="bg-red-50 text-red-700 rounded-lg p-4 flex items-center gap-3">
                             <AlertCircle className="w-5 h-5" />
                             <p className="font-medium">{error}</p>
-                        </div>
-                    )}
+                        </div>}
 
-                    {hasResults && (
-                        <div className="space-y-8">
-                            <RiskOverviewCard
-                                riskAssessment={scanResult.riskAssessment}
-                                performance={scanResult.performance}
-                            />
-                            <FindingsCard
-                                findings={scanResult.findings || []}
-                            />
-                            <ExportSection 
-                                findings={scanResult.findings || []}
-                                riskAssessment={scanResult.riskAssessment || {}}
-                            />
-                        </div>
-                    )}
+                    {hasResults && <div className="space-y-8">
+                            <RiskOverviewCard riskAssessment={scanResult.riskAssessment} performance={scanResult.performance} />
+                            <FindingsCard findings={scanResult.findings || []} />
+                            <ExportSection findings={scanResult.findings || []} riskAssessment={scanResult.riskAssessment || {}} />
+                        </div>}
                  </main>
 
                  <footer className="text-center mt-16">
                    <p className="text-sm text-[#9CA3AF]">© 2025 Neperia. All rights reserved.</p>
                  </footer>
              </div>
-        </div>
-    );
+        </div>;
 }
