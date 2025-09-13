@@ -1,8 +1,4 @@
 import React from 'react';
-import { Info } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { getRiskLevelStyles } from '@/utils/findingUtils';
 
 interface RiskAssessment {
     riskScore?: number;
@@ -32,68 +28,32 @@ interface RiskOverviewCardProps {
     performance?: Performance;
 }
 
-const RiskScoreIndicator = ({ normalizedScore, finalScore, level = 'None', multiplier }) => {
-  const { text } = getRiskLevelStyles(level);
-  
-  return (
+const RiskScoreIndicator = ({ normalizedScore, finalScore, level = 'None', multiplier }) => (
     <div className="text-center">
         {normalizedScore !== undefined && finalScore !== undefined ? (
             <div>
                 <div className="flex items-center justify-center gap-2 mb-2">
-                    <span className="text-sm text-muted-foreground">Normalized:</span>
-                    <span className="text-2xl font-semibold text-foreground tabular-nums">{Number(normalizedScore).toFixed(0)}</span>
+                    <span className="text-sm text-[#6B7280]">Normalized:</span>
+                    <span className="text-2xl font-semibold text-[#374151] tabular-nums">{normalizedScore.toFixed(0)}</span>
                 </div>
-                {multiplier && multiplier !== 1 && isFinite(multiplier) && (
+                {multiplier && multiplier !== 1 && (
                     <div className="flex items-center justify-center gap-2 mb-2">
-                        <span className="text-xs text-muted-foreground">×{Number(multiplier).toFixed(2)}</span>
+                        <span className="text-xs text-[#9CA3AF]">×{multiplier.toFixed(1)}</span>
                     </div>
                 )}
                 <div className="flex items-center justify-center gap-2">
-                    <span className="text-sm text-muted-foreground">Final:</span>
-                    <span className={`text-[48px] font-semibold tracking-[-0.04em] tabular-nums ${text}`}>{Number(finalScore).toFixed(0)}</span>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-4 w-4 p-0 text-[#9CA3AF] hover:text-[#6B7280]">
-                          <Info className="h-3 w-3" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-80">
-                        <div className="space-y-2">
-                          <h4 className="font-medium text-sm">File Score (0–100)</h4>
-                          <p className="text-sm text-muted-foreground">
-                            This is a normalized risk index for the file (0–100). It's derived from the mix of severities in the file and your file-level multipliers, so you can prioritize where to fix first. It's not a CVSS score.
-                          </p>
-                        </div>
-                      </PopoverContent>
-                    </Popover>
+                    <span className="text-sm text-[#6B7280]">Final:</span>
+                    <span className="text-[48px] font-semibold tracking-[-0.04em] text-[#374151] tabular-nums">{finalScore.toFixed(0)}</span>
                 </div>
             </div>
         ) : (
-            <div className="flex items-center justify-center gap-2">
-                <p className={`text-[72px] font-semibold tracking-[-0.04em] tabular-nums ${text}`}>
-                    {Number(finalScore || normalizedScore || 0).toFixed(0)}
-                </p>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-4 w-4 p-0 text-[#9CA3AF] hover:text-[#6B7280]">
-                      <Info className="h-3 w-3" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-80">
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-sm">File Score (0–100)</h4>
-                      <p className="text-sm text-muted-foreground">
-                        This is a normalized risk index for the file (0–100). It's derived from the mix of severities in the file and your file-level multipliers, so you can prioritize where to fix first. It's not a CVSS score.
-                      </p>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-            </div>
+            <p className="text-[72px] font-semibold tracking-[-0.04em] text-[#374151] tabular-nums">
+                {(finalScore || normalizedScore || 0).toFixed(0)}
+            </p>
         )}
-        <p className={`text-sm font-medium mt-2 ${text}`}>{level} Risk</p>
+        <p className="text-sm font-medium text-[#6B7280] mt-2">{level} Risk</p>
     </div>
-  );
-};
+);
 
 const SeverityPill = ({ severity, count }) => {
     const s = severity?.toLowerCase();
@@ -119,23 +79,14 @@ const Metric = ({ label, value }) => (
     </div>
 );
 
-export default function RiskOverviewCard({ riskAssessment = {}, metadata = {}, performance = {} }: RiskOverviewCardProps) {
+export default function RiskOverviewCard({ riskAssessment = {}, performance = {} }: RiskOverviewCardProps) {
     const { 
         riskScore, riskLevel, findingsBreakdown = {}, 
         normalizedScore, finalScore, multiplier, priority, confidence, appliedFactors = []
     } = riskAssessment;
     const totalVulns = Object.values(findingsBreakdown).reduce((a, b) => (typeof b === 'number' ? a + b : a), 0);
     
-    // Prioritize metadata, then performance, then calculated values
-    const scanTime = metadata?.calculationTimeMs !== undefined ? 
-        (metadata.calculationTimeMs < 1000 ? `${Math.round(metadata.calculationTimeMs)}ms` : `${(metadata.calculationTimeMs / 1000).toFixed(2)}s`) :
-        (performance?.scanTime !== undefined ? 
-            (performance.scanTime < 1000 ? `${Math.round(performance.scanTime)}ms` : `${(performance.scanTime / 1000).toFixed(2)}s`) : 
-            'N/A');
-    
-    const rulesApplied = metadata?.rulesApplied !== undefined ? 
-        String(metadata.rulesApplied) :
-        (performance?.rulesExecuted !== undefined ? String(performance.rulesExecuted) : 'N/A');
+    const { scanTime, rulesExecuted } = performance;
     
     return (
         <div className="bg-white p-6 rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
@@ -188,11 +139,11 @@ export default function RiskOverviewCard({ riskAssessment = {}, metadata = {}, p
                         <div className="space-y-1">
                             <Metric 
                                 label="Scan Time" 
-                                value={scanTime}
+                                value={typeof scanTime === 'number' ? `${scanTime.toFixed(2)}s` : 'N/A'}
                             />
                             <Metric 
                                 label="Rules Applied" 
-                                value={rulesApplied}
+                                value={rulesExecuted || 'N/A'}
                             />
                             {priority && (
                                 <Metric label="Priority" value={priority} />

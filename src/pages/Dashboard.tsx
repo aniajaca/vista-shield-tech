@@ -10,11 +10,7 @@ import { RiskSettingsDrawer } from "@/components/RiskSettingsDrawer";
 import { useRiskSettings } from "@/hooks/useRiskSettings";
 import { AlertCircle, Settings } from "lucide-react";
 import { runConnectionTest } from "@/utils/testConnection";
-import { formatScanTime, getRiskLevelStyles } from "@/utils/findingUtils";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import { ScanLoadingSkeleton } from "@/components/LoadingSkeleton";
-import { EmptyState } from "@/components/EmptyState";
-import { toast } from "sonner";
 
 const API_BASE_URL = 'https://semgrep-backend-production.up.railway.app';
 
@@ -57,9 +53,7 @@ export default function Dashboard() {
     const [error, setError] = useState(null);
     const [progress, setProgress] = useState(0);
     const [backendStatus, setBackendStatus] = useState('checking');
-    const { getRiskConfig, getRiskContext, saveLastScan, lastScan } = useRiskSettings();
-    const [scanStartTime, setScanStartTime] = useState<number>(0);
-    const [scanEndTime, setScanEndTime] = useState<number>(0);
+    const { getRiskConfig, getRiskContext } = useRiskSettings();
 
     // Test backend connection on component mount
     useEffect(() => {
@@ -94,7 +88,6 @@ export default function Dashboard() {
             }
 
             console.log('🔍 Starting scan for file:', options.file.name);
-            setScanStartTime(Date.now());
             
             // Get current risk settings
             const riskConfig = getRiskConfig();
@@ -103,14 +96,10 @@ export default function Dashboard() {
             console.log('🎯 Using risk config:', riskConfig);
             console.log('🌍 Using context:', context);
             
-            // Save scan for re-run capability
-            saveLastScan('/scan-file', { file: options.file, riskConfig, context });
-            
             const response = await scanFileForDashboard(options.file, riskConfig, context);
 
             if (response.success) {
                 console.log('📊 Setting scan result:', response.data);
-                setScanEndTime(Date.now());
                 
                 // Debug: Log the full response structure
                 console.log('🔍 Full API response structure:', {
@@ -148,15 +137,6 @@ export default function Dashboard() {
             setProgress(100);
             setTimeout(() => setIsLoading(false), 500);
         }
-    };
-
-    const handleRerunWithNewSettings = async () => {
-        if (!lastScan || !lastScan.payload?.file) {
-            toast('No previous scan to re-run');
-            return;
-        }
-        
-        await handleScan(lastScan.payload);
     };
 
     const hasResults = scanResult && !isLoading;
@@ -206,7 +186,7 @@ export default function Dashboard() {
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        <RiskSettingsDrawer onSettingsChange={handleRerunWithNewSettings}>
+                        <RiskSettingsDrawer>
                             <Button variant="outline" size="sm">
                                 <Settings className="w-4 h-4 mr-2" />
                                 Risk Settings
@@ -224,12 +204,8 @@ export default function Dashboard() {
                 </div>
 
                 <main className="space-y-8">
-                    {!hasResults && !isLoading && (
+                    {!hasResults && (
                         <ScannerInterface onScan={handleScan} isLoading={isLoading} />
-                    )}
-                    
-                    {isLoading && (
-                        <ScanLoadingSkeleton />
                     )}
 
                     {error && (
@@ -241,41 +217,34 @@ export default function Dashboard() {
 
                     {hasResults && (
                         <ErrorBoundary>
-                            {scanResult.findings && scanResult.findings.length === 0 ? (
-                                <EmptyState type="code" />
-                            ) : (
-                                <div className="space-y-8">
+                            <div className="space-y-8">
                                 <ErrorBoundary>
-                                <RiskOverviewCard
-                                    riskAssessment={{
-                                        riskScore: scanResult.score?.final || scanResult.riskAssessment?.riskScore,
-                                        riskLevel: scanResult.risk?.level || scanResult.riskAssessment?.riskLevel,
-                                        findingsBreakdown: scanResult.riskAssessment?.severityDistribution || scanResult.riskAssessment?.findingsBreakdown,
-                                        
-                                        // File-level adjustments
-                                        normalizedScore: scanResult.score?.normalized || scanResult.riskAssessment?.normalizedScore,
-                                        finalScore: scanResult.score?.final || scanResult.riskAssessment?.finalScore || scanResult.riskAssessment?.riskScore,
-                                        multiplier: scanResult.fileScore?.multiplier || scanResult.riskAssessment?.multiplier || (scanResult.score?.normalized ? (scanResult.score.final ?? 0) / (scanResult.score.normalized || 1) : undefined),
-                                        priority: scanResult.risk?.priority?.level || scanResult.riskAssessment?.priority,
-                                        confidence: scanResult.riskAssessment?.confidence,
-                                        
-                                        // Applied factors from file or context
-                                        appliedFactors: scanResult.appliedFactors || scanResult.riskAssessment?.appliedFactors || 
-                                            (scanResult.context?.factors ? Object.entries(scanResult.context.factors)
-                                                .filter(([_, config]: any) => config.enabled)
-                                                .map(([name, config]: any) => ({
-                                                    name,
-                                                    value: config.weight || config.value || 1,
-                                                    type: config.weight ? 'multiplier' : 'additive',
-                                                    description: config.description
-                                                })) : [])
-                                    }}
-                                    metadata={scanResult.metadata}
-                                    performance={{
-                                        scanTime: scanResult.performance?.scanTime || (scanEndTime && scanStartTime ? (scanEndTime - scanStartTime) / 1000 : undefined),
-                                        rulesExecuted: scanResult.performance?.rulesExecuted || (scanResult.findings?.length || 0)
-                                    }}
-                                />
+                                    <RiskOverviewCard
+                                        riskAssessment={{
+                                            riskScore: scanResult.score?.final || scanResult.riskAssessment?.riskScore,
+                                            riskLevel: scanResult.risk?.level || scanResult.riskAssessment?.riskLevel,
+                                            findingsBreakdown: scanResult.riskAssessment?.severityDistribution || scanResult.riskAssessment?.findingsBreakdown,
+                                            
+                                            // File-level adjustments
+                                            normalizedScore: scanResult.score?.normalized || scanResult.riskAssessment?.normalizedScore,
+                                            finalScore: scanResult.score?.final || scanResult.riskAssessment?.finalScore || scanResult.riskAssessment?.riskScore,
+                                            multiplier: scanResult.fileScore?.multiplier || scanResult.riskAssessment?.multiplier,
+                                            priority: scanResult.risk?.priority?.level || scanResult.riskAssessment?.priority,
+                                            confidence: scanResult.riskAssessment?.confidence,
+                                            
+                                            // Applied factors from file or context
+                                            appliedFactors: scanResult.appliedFactors || scanResult.riskAssessment?.appliedFactors || 
+                                                (scanResult.context?.factors ? Object.entries(scanResult.context.factors)
+                                                    .filter(([_, config]: any) => config.enabled)
+                                                    .map(([name, config]: any) => ({
+                                                        name,
+                                                        value: config.weight || config.value || 1,
+                                                        type: config.weight ? 'multiplier' : 'additive',
+                                                        description: config.description
+                                                    })) : [])
+                                        }}
+                                        performance={scanResult.performance}
+                                    />
                                 </ErrorBoundary>
                                 <ErrorBoundary>
                                     <FindingsCard
@@ -287,9 +256,8 @@ export default function Dashboard() {
                                         findings={scanResult.findings || []}
                                         riskAssessment={scanResult.riskAssessment || {}}
                                     />
-                                    </ErrorBoundary>
-                                </div>
-                            )}
+                                </ErrorBoundary>
+                            </div>
                         </ErrorBoundary>
                     )}
                  </main>
