@@ -6,7 +6,9 @@ import ScannerInterface from "../components/clean-scanner/ScannerInterface";
 import RiskOverviewCard from "../components/clean-scanner/RiskOverviewCard";
 import FindingsCard from "../components/clean-scanner/FindingsCard";
 import ExportSection from "../components/clean-scanner/ExportSection";
-import { AlertCircle } from "lucide-react";
+import { RiskSettingsDrawer } from "@/components/RiskSettingsDrawer";
+import { useRiskSettings } from "@/hooks/useRiskSettings";
+import { AlertCircle, Settings } from "lucide-react";
 import { runConnectionTest } from "@/utils/testConnection";
 
 const API_BASE_URL = 'https://semgrep-backend-production.up.railway.app';
@@ -14,7 +16,7 @@ const API_BASE_URL = 'https://semgrep-backend-production.up.railway.app';
 /**
  * Scan uploaded file by reading its content and sending to /scan-code endpoint
  */
-async function scanFile(file) {
+async function scanFile(file, riskConfig = null, context = null) {
   try {
     console.log('📄 Reading file content:', { name: file.name, size: file.size });
     
@@ -23,6 +25,21 @@ async function scanFile(file) {
     
     console.log('🚀 Sending to /scan-code endpoint with JSON payload');
     
+    const payload: any = {
+      code: code,
+      filename: file.name
+    };
+    
+    // Add risk config and context if provided
+    if (riskConfig) {
+      payload.riskConfig = riskConfig;
+    }
+    if (context) {
+      payload.context = context;
+    }
+    
+    console.log('📦 Payload with risk settings:', payload);
+
     const response = await fetch(`${API_BASE_URL}/scan-code`, {
       method: 'POST',
       headers: {
@@ -30,10 +47,7 @@ async function scanFile(file) {
         'Accept': 'application/json',
       },
       mode: 'cors',
-      body: JSON.stringify({
-        code: code,
-        filename: file.name
-      })
+      body: JSON.stringify(payload)
     });
 
     console.log('📨 Response status:', response.status, response.statusText);
@@ -84,6 +98,7 @@ export default function Dashboard() {
     const [error, setError] = useState(null);
     const [progress, setProgress] = useState(0);
     const [backendStatus, setBackendStatus] = useState('checking');
+    const { getRiskConfig, getRiskContext } = useRiskSettings();
 
     // Test backend connection on component mount
     useEffect(() => {
@@ -119,7 +134,14 @@ export default function Dashboard() {
 
             console.log('🔍 Starting scan for file:', options.file.name);
             
-            const response = await scanFile(options.file);
+            // Get current risk settings
+            const riskConfig = getRiskConfig();
+            const context = getRiskContext();
+            
+            console.log('🎯 Using risk config:', riskConfig);
+            console.log('🌍 Using context:', context);
+            
+            const response = await scanFile(options.file, riskConfig, context);
 
             if (response.success) {
                 console.log('📊 Setting scan result:', response.data);
@@ -222,14 +244,22 @@ export default function Dashboard() {
                              '● Checking...'}
                         </div>
                     </div>
-                     {hasResults && (
-                        <Button 
-                            onClick={() => setScanResult(null)}
-                            variant="ghost"
-                            className="text-sm font-medium text-[#6B7280] hover:text-[#AFCB0E] hover:bg-[#F9FAFB] transition-colors duration-150">
-                            Scan another file
-                        </Button>
-                     )}
+                    <div className="flex items-center gap-2">
+                        <RiskSettingsDrawer>
+                            <Button variant="outline" size="sm">
+                                <Settings className="w-4 h-4 mr-2" />
+                                Risk Settings
+                            </Button>
+                        </RiskSettingsDrawer>
+                        {hasResults && (
+                            <Button 
+                                onClick={() => setScanResult(null)}
+                                variant="ghost"
+                                className="text-sm font-medium text-[#6B7280] hover:text-[#AFCB0E] hover:bg-[#F9FAFB] transition-colors duration-150">
+                                Scan another file
+                            </Button>
+                        )}
+                    </div>
                 </div>
 
                 <main className="space-y-8">

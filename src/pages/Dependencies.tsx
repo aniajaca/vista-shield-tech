@@ -5,12 +5,14 @@ import DependenciesScannerInterface from "../components/dependencies/Dependencie
 import DependenciesRiskOverviewCard from "../components/dependencies/DependenciesRiskOverviewCard";
 import DependenciesFindingsCard from "../components/dependencies/DependenciesFindingsCard";
 import DependenciesExportSection from "../components/dependencies/DependenciesExportSection";
-import { AlertCircle } from "lucide-react";
+import { RiskSettingsDrawer } from "@/components/RiskSettingsDrawer";
+import { useRiskSettings } from "@/hooks/useRiskSettings";
+import { AlertCircle, Settings } from "lucide-react";
 import { runConnectionTest } from "@/utils/testConnection";
 
 const API_BASE_URL = 'https://semgrep-backend-production.up.railway.app';
 
-async function scanDependencies(packageJsonContent: string, packageLockContent?: string) {
+async function scanDependencies(packageJsonContent: string, packageLockContent?: string, riskConfig = null, context = null) {
   try {
     console.log('📦 Scanning dependencies...');
     
@@ -42,6 +44,21 @@ async function scanDependencies(packageJsonContent: string, packageLockContent?:
     } catch (e) {
       console.warn('⚠️ Could not iterate dependencies:', e);
     }
+    const payload: any = {
+      packageJson: packageJsonObj,
+      packageLockJson: packageLockObj
+    };
+    
+    // Add risk config and context if provided
+    if (riskConfig) {
+      payload.riskConfig = riskConfig;
+    }
+    if (context) {
+      payload.context = context;
+    }
+    
+    console.log('📦 Dependencies payload with risk settings:', payload);
+    
     const response = await fetch(`${API_BASE_URL}/scan-dependencies`, {
       method: 'POST',
       headers: {
@@ -49,10 +66,7 @@ async function scanDependencies(packageJsonContent: string, packageLockContent?:
         'Accept': 'application/json',
       },
       mode: 'cors',
-      body: JSON.stringify({
-        packageJson: packageJsonObj,
-        packageLockJson: packageLockObj
-      })
+      body: JSON.stringify(payload)
     });
 
     console.log('📨 Response status:', response.status, response.statusText);
@@ -90,6 +104,7 @@ export default function Dependencies() {
     const [error, setError] = useState(null);
     const [progress, setProgress] = useState(0);
     const [backendStatus, setBackendStatus] = useState('checking');
+    const { getRiskConfig, getRiskContext } = useRiskSettings();
 
     // Test backend connection on component mount
     useEffect(() => {
@@ -125,7 +140,19 @@ export default function Dependencies() {
 
             console.log('🔍 Starting dependencies scan');
             
-            const resp = await scanDependencies(options.packageJson, options.packageLock);
+            // Get current risk settings
+            const riskConfig = getRiskConfig();
+            const context = getRiskContext();
+            
+            console.log('🎯 Using risk config for dependencies:', riskConfig);
+            console.log('🌍 Using context for dependencies:', context);
+            
+            const resp = await scanDependencies(
+                options.packageJson, 
+                options.packageLock,
+                riskConfig,
+                context
+            );
 
             if (resp.success) {
                 console.log('📊 Setting dependencies scan result (raw):', resp.data);
@@ -189,14 +216,22 @@ export default function Dependencies() {
                              '● Checking...'}
                         </div>
                     </div>
-                     {hasResults && (
-                        <Button 
-                            onClick={() => setScanResult(null)}
-                            variant="ghost"
-                            className="text-sm font-medium text-[#6B7280] hover:text-[#AFCB0E] hover:bg-[#F9FAFB] transition-colors duration-150">
-                            Scan other dependencies
-                        </Button>
-                     )}
+                    <div className="flex items-center gap-2">
+                        <RiskSettingsDrawer>
+                            <Button variant="outline" size="sm">
+                                <Settings className="w-4 h-4 mr-2" />
+                                Risk Settings
+                            </Button>
+                        </RiskSettingsDrawer>
+                        {hasResults && (
+                            <Button 
+                                onClick={() => setScanResult(null)}
+                                variant="ghost"
+                                className="text-sm font-medium text-[#6B7280] hover:text-[#AFCB0E] hover:bg-[#F9FAFB] transition-colors duration-150">
+                                Scan other dependencies
+                            </Button>
+                        )}
+                    </div>
                 </div>
 
                 <main className="space-y-8">

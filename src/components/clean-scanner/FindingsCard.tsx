@@ -90,8 +90,22 @@ const FindingItem = ({ finding }) => {
                                 <InfoBlock title="CVSS Score">
                                     {cvss.baseScore && <p>Base: <span className="font-semibold tabular-nums">{cvss.baseScore.toFixed(1)}</span></p>}
                                     {cvss.adjustedScore && cvss.adjustedScore !== cvss.baseScore && (
-                                        <p>Adjusted: <span className="font-semibold tabular-nums">{cvss.adjustedScore.toFixed(1)}</span></p>
+                                        <p>Adjusted: <span className="font-semibold tabular-nums text-orange-600">{cvss.adjustedScore.toFixed(1)}</span></p>
                                     )}
+                                    {cvss.vector && <p className="text-xs text-muted-foreground">Vector: {cvss.vector}</p>}
+                                </InfoBlock>
+                            )}
+                            
+                            {/* Risk Adjustments */}
+                            {finding.risk?.adjusted?.adjustments && (
+                                <InfoBlock title="Risk Factors Applied">
+                                    <div className="flex flex-wrap gap-1">
+                                        {Object.entries(finding.risk.adjusted.adjustments).map(([factor, value]) => (
+                                            <div key={factor} className="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded">
+                                                {factor}: {typeof value === 'number' ? (value > 1 ? `×${value.toFixed(1)}` : `+${value.toFixed(1)}`) : String(value)}
+                                            </div>
+                                        ))}
+                                    </div>
                                 </InfoBlock>
                             )}
                         </div>
