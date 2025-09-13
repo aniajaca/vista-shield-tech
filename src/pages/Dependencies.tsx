@@ -9,6 +9,9 @@ import { RiskSettingsDrawer } from "@/components/RiskSettingsDrawer";
 import { useRiskSettings } from "@/hooks/useRiskSettings";
 import { AlertCircle, Settings } from "lucide-react";
 import { runConnectionTest } from "@/utils/testConnection";
+import { ScanLoadingSkeleton } from "@/components/LoadingSkeleton";
+import { EmptyState } from "@/components/EmptyState";
+import { toast } from "sonner";
 
 const API_BASE_URL = 'https://semgrep-backend-production.up.railway.app';
 
@@ -20,7 +23,9 @@ export default function Dependencies() {
     const [error, setError] = useState(null);
     const [progress, setProgress] = useState(0);
     const [backendStatus, setBackendStatus] = useState('checking');
-    const { getRiskConfig, getRiskContext } = useRiskSettings();
+    const { getRiskConfig, getRiskContext, saveLastScan, lastScan } = useRiskSettings();
+    const [scanStartTime, setScanStartTime] = useState<number>(0);
+    const [scanEndTime, setScanEndTime] = useState<number>(0);
 
     // Test backend connection on component mount
     useEffect(() => {
@@ -55,6 +60,7 @@ export default function Dependencies() {
             }
 
             console.log('🔍 Starting dependencies scan');
+            setScanStartTime(Date.now());
             
             // Get current risk settings
             const riskConfig = getRiskConfig();
@@ -62,6 +68,9 @@ export default function Dependencies() {
             
             console.log('🎯 Using risk config for dependencies:', riskConfig);
             console.log('🌍 Using context for dependencies:', context);
+            
+            // Save scan for re-run capability
+            saveLastScan('/scan-dependencies', { packageJson: options.packageJson, packageLock: options.packageLock, riskConfig, context });
             
             // Import the API function
             const { scanDependencies } = await import('@/lib/api');
@@ -76,6 +85,7 @@ export default function Dependencies() {
             
             const response = await scanDependencies(packageJsonObj, riskConfig, context);
             console.log('✅ Dependencies scan successful:', response);
+            setScanEndTime(Date.now());
             setScanResult(response);
 
         } catch (err) {
@@ -86,6 +96,15 @@ export default function Dependencies() {
             setProgress(100);
             setTimeout(() => setIsLoading(false), 500);
         }
+    };
+
+    const handleRerunWithNewSettings = async () => {
+        if (!lastScan || !lastScan.payload?.packageJson) {
+            toast('No previous scan to re-run');
+            return;
+        }
+        
+        await handleScan(lastScan.payload);
     };
 
     const hasResults = scanResult && !isLoading;
@@ -134,7 +153,7 @@ export default function Dependencies() {
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        <RiskSettingsDrawer>
+                        <RiskSettingsDrawer onSettingsChange={handleRerunWithNewSettings}>
                             <Button variant="outline" size="sm">
                                 <Settings className="w-4 h-4 mr-2" />
                                 Risk Settings
@@ -152,8 +171,12 @@ export default function Dependencies() {
                 </div>
 
                 <main className="space-y-8">
-                    {!hasResults && (
+                    {!hasResults && !isLoading && (
                         <DependenciesScannerInterface onScan={handleScan} isLoading={isLoading} />
+                    )}
+                    
+                    {isLoading && (
+                        <ScanLoadingSkeleton />
                     )}
 
                     {error && (
@@ -164,7 +187,41 @@ export default function Dependencies() {
                     )}
 
                     {hasResults && (
+                        <>
+                            {(!scanResult.findings || scanResult.findings.length === 0) ? (
+                                <EmptyState type="dependencies" />
+                            ) : (
                         <div className="space-y-8">
+                            {/* Summary chips at the top */}
+                            {scanResult.findings?.length > 0 && (
+                                <div className="flex flex-wrap gap-2 mb-6">
+                                    {(() => {
+                                        const stats = scanResult.riskAssessment?.severityDistribution || scanResult.stats || {};
+                                        const total = Object.values(stats).reduce((sum: number, count: any) => {
+                                            return sum + (typeof count === 'number' ? count : 0);
+                                        }, 0);
+                                        
+                                        return [
+                                            { level: 'critical', count: stats.critical || 0 },
+                                            { level: 'high', count: stats.high || 0 },
+                                            { level: 'medium', count: stats.medium || 0 },
+                                            { level: 'low', count: stats.low || 0 },
+                                            { level: 'total', count: total }
+                                        ].map(({ level, count }) => (
+                                            <div key={level} className={`px-3 py-1 rounded-full text-sm font-medium ${
+                                                level === 'critical' ? 'bg-critical text-critical-foreground' :
+                                                level === 'high' ? 'bg-high text-high-foreground' :
+                                                level === 'medium' ? 'bg-medium text-medium-foreground' :
+                                                level === 'low' ? 'bg-low text-low-foreground' :
+                                                'bg-muted text-muted-foreground'
+                                            }`}>
+                                                {level === 'total' ? 'Total' : level.charAt(0).toUpperCase() + level.slice(1)}: {count}
+                                            </div>
+                                        ));
+                                    })()}
+                                </div>
+                            )}
+                            
                             <DependenciesRiskOverviewCard
                                 riskAssessment={{
                                     riskScore: scanResult.score?.final || scanResult.riskAssessment?.riskScore || scanResult.risk_score || 0,
@@ -189,11 +246,11 @@ export default function Dependencies() {
                                                 description: config.description
                                             })) : [])
                                 }}
-                                performance={scanResult.performance || {
-                                    scanTime: scanResult.scan_time,
-                                    packagesScanned: scanResult.packages_scanned,
-                                    dataSources: scanResult.data_sources,
-                                    rulesExecuted: scanResult.rules_applied
+                                performance={{
+                                    scanTime: scanResult.performance?.scanTime || (scanEndTime && scanStartTime ? (scanEndTime - scanStartTime) / 1000 : undefined),
+                                    packagesScanned: scanResult.performance?.packagesScanned || scanResult.packages_scanned,
+                                    dataSources: scanResult.performance?.dataSources || scanResult.data_sources,
+                                    rulesExecuted: scanResult.performance?.rulesExecuted || scanResult.rules_applied
                                 }}
                             />
                             <DependenciesFindingsCard
@@ -210,8 +267,10 @@ export default function Dependencies() {
                                     packagesScanned: scanResult.packages_scanned,
                                     dataSources: scanResult.data_sources
                                 }}
-                            />
-                        </div>
+                                />
+                            </div>
+                            )}
+                        </>
                     )}
                 </main>
 

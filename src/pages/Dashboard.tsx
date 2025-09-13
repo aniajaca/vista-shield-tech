@@ -12,6 +12,8 @@ import { AlertCircle, Settings } from "lucide-react";
 import { runConnectionTest } from "@/utils/testConnection";
 import { formatScanTime, getRiskLevelStyles } from "@/utils/findingUtils";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { ScanLoadingSkeleton } from "@/components/LoadingSkeleton";
+import { EmptyState } from "@/components/EmptyState";
 import { toast } from "sonner";
 
 const API_BASE_URL = 'https://semgrep-backend-production.up.railway.app';
@@ -55,8 +57,9 @@ export default function Dashboard() {
     const [error, setError] = useState(null);
     const [progress, setProgress] = useState(0);
     const [backendStatus, setBackendStatus] = useState('checking');
-    const { getRiskConfig, getRiskContext, saveLastScan } = useRiskSettings();
+    const { getRiskConfig, getRiskContext, saveLastScan, lastScan } = useRiskSettings();
     const [scanStartTime, setScanStartTime] = useState<number>(0);
+    const [scanEndTime, setScanEndTime] = useState<number>(0);
 
     // Test backend connection on component mount
     useEffect(() => {
@@ -107,6 +110,7 @@ export default function Dashboard() {
 
             if (response.success) {
                 console.log('📊 Setting scan result:', response.data);
+                setScanEndTime(Date.now());
                 
                 // Debug: Log the full response structure
                 console.log('🔍 Full API response structure:', {
@@ -144,6 +148,15 @@ export default function Dashboard() {
             setProgress(100);
             setTimeout(() => setIsLoading(false), 500);
         }
+    };
+
+    const handleRerunWithNewSettings = async () => {
+        if (!lastScan || !lastScan.payload?.file) {
+            toast('No previous scan to re-run');
+            return;
+        }
+        
+        await handleScan(lastScan.payload);
     };
 
     const hasResults = scanResult && !isLoading;
@@ -193,7 +206,7 @@ export default function Dashboard() {
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        <RiskSettingsDrawer>
+                        <RiskSettingsDrawer onSettingsChange={handleRerunWithNewSettings}>
                             <Button variant="outline" size="sm">
                                 <Settings className="w-4 h-4 mr-2" />
                                 Risk Settings
@@ -211,8 +224,12 @@ export default function Dashboard() {
                 </div>
 
                 <main className="space-y-8">
-                    {!hasResults && (
+                    {!hasResults && !isLoading && (
                         <ScannerInterface onScan={handleScan} isLoading={isLoading} />
+                    )}
+                    
+                    {isLoading && (
+                        <ScanLoadingSkeleton />
                     )}
 
                     {error && (
@@ -224,7 +241,10 @@ export default function Dashboard() {
 
                     {hasResults && (
                         <ErrorBoundary>
-                            <div className="space-y-8">
+                            {scanResult.findings && scanResult.findings.length === 0 ? (
+                                <EmptyState type="code" />
+                            ) : (
+                                <div className="space-y-8">
                                 <ErrorBoundary>
                                 <RiskOverviewCard
                                     riskAssessment={{
@@ -250,7 +270,10 @@ export default function Dashboard() {
                                                     description: config.description
                                                 })) : [])
                                     }}
-                                    performance={scanResult.performance}
+                                    performance={{
+                                        scanTime: scanResult.performance?.scanTime || (scanEndTime && scanStartTime ? (scanEndTime - scanStartTime) / 1000 : undefined),
+                                        rulesExecuted: scanResult.performance?.rulesExecuted || (scanResult.findings?.length || 0)
+                                    }}
                                 />
                                 </ErrorBoundary>
                                 <ErrorBoundary>
@@ -263,8 +286,9 @@ export default function Dashboard() {
                                         findings={scanResult.findings || []}
                                         riskAssessment={scanResult.riskAssessment || {}}
                                     />
-                                </ErrorBoundary>
-                            </div>
+                                    </ErrorBoundary>
+                                </div>
+                            )}
                         </ErrorBoundary>
                     )}
                  </main>

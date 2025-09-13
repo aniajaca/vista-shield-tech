@@ -2,6 +2,7 @@ import React from 'react';
 import { Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { getRiskLevelStyles } from '@/utils/findingUtils';
 
 interface RiskAssessment {
     riskScore?: number;
@@ -31,22 +32,25 @@ interface RiskOverviewCardProps {
     performance?: Performance;
 }
 
-const RiskScoreIndicator = ({ normalizedScore, finalScore, level = 'None', multiplier }) => (
+const RiskScoreIndicator = ({ normalizedScore, finalScore, level = 'None', multiplier }) => {
+  const { text } = getRiskLevelStyles(level);
+  
+  return (
     <div className="text-center">
         {normalizedScore !== undefined && finalScore !== undefined ? (
             <div>
                 <div className="flex items-center justify-center gap-2 mb-2">
-                    <span className="text-sm text-[#6B7280]">Normalized:</span>
-                    <span className="text-2xl font-semibold text-[#374151] tabular-nums">{Number(normalizedScore).toFixed(0)}</span>
+                    <span className="text-sm text-muted-foreground">Normalized:</span>
+                    <span className="text-2xl font-semibold text-foreground tabular-nums">{Number(normalizedScore).toFixed(0)}</span>
                 </div>
                 {multiplier && multiplier !== 1 && isFinite(multiplier) && (
                     <div className="flex items-center justify-center gap-2 mb-2">
-                        <span className="text-xs text-[#9CA3AF]">×{Number(multiplier).toFixed(2)}</span>
+                        <span className="text-xs text-muted-foreground">×{Number(multiplier).toFixed(2)}</span>
                     </div>
                 )}
                 <div className="flex items-center justify-center gap-2">
-                    <span className="text-sm text-[#6B7280]">Final:</span>
-                    <span className="text-[48px] font-semibold tracking-[-0.04em] text-[#374151] tabular-nums">{Number(finalScore).toFixed(0)}</span>
+                    <span className="text-sm text-muted-foreground">Final:</span>
+                    <span className={`text-[48px] font-semibold tracking-[-0.04em] tabular-nums ${text}`}>{Number(finalScore).toFixed(0)}</span>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button variant="ghost" size="sm" className="h-4 w-4 p-0 text-[#9CA3AF] hover:text-[#6B7280]">
@@ -66,7 +70,7 @@ const RiskScoreIndicator = ({ normalizedScore, finalScore, level = 'None', multi
             </div>
         ) : (
             <div className="flex items-center justify-center gap-2">
-                <p className="text-[72px] font-semibold tracking-[-0.04em] text-[#374151] tabular-nums">
+                <p className={`text-[72px] font-semibold tracking-[-0.04em] tabular-nums ${text}`}>
                     {Number(finalScore || normalizedScore || 0).toFixed(0)}
                 </p>
                 <Popover>
@@ -86,9 +90,10 @@ const RiskScoreIndicator = ({ normalizedScore, finalScore, level = 'None', multi
                 </Popover>
             </div>
         )}
-        <p className="text-sm font-medium text-[#6B7280] mt-2">{level} Risk</p>
+        <p className={`text-sm font-medium mt-2 ${text}`}>{level} Risk</p>
     </div>
-);
+  );
+};
 
 const SeverityPill = ({ severity, count }) => {
     const s = severity?.toLowerCase();

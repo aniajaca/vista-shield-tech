@@ -117,45 +117,46 @@ export function getRiskLevelStyles(level: string) {
   switch (normalizedLevel) {
     case 'critical':
       return {
-        bg: 'bg-red-50',
-        text: 'text-red-800',
-        border: 'border-red-200',
-        badge: 'bg-red-100 text-red-800'
+        bg: 'bg-critical/10',
+        text: 'text-critical',
+        border: 'border-critical/20',
+        badge: 'bg-critical text-critical-foreground'
       };
     case 'high':
       return {
-        bg: 'bg-orange-50',
-        text: 'text-orange-800',
-        border: 'border-orange-200',
-        badge: 'bg-orange-100 text-orange-800'
+        bg: 'bg-high/10',
+        text: 'text-high',
+        border: 'border-high/20',
+        badge: 'bg-high text-high-foreground'
       };
     case 'medium':
       return {
-        bg: 'bg-amber-50',
-        text: 'text-amber-800',
-        border: 'border-amber-200',
-        badge: 'bg-amber-100 text-amber-800'
+        bg: 'bg-medium/10',
+        text: 'text-medium',
+        border: 'border-medium/20',
+        badge: 'bg-medium text-medium-foreground'
       };
     case 'low':
       return {
-        bg: 'bg-lime-50',
-        text: 'text-lime-800',
-        border: 'border-lime-200',
-        badge: 'bg-lime-100 text-lime-800'
+        bg: 'bg-low/10',
+        text: 'text-low',
+        border: 'border-low/20',
+        badge: 'bg-low text-low-foreground'
       };
     case 'info':
+    case 'minimal':
       return {
-        bg: 'bg-teal-50',
-        text: 'text-teal-800',
-        border: 'border-teal-200',
-        badge: 'bg-teal-100 text-teal-800'
+        bg: 'bg-info/10',
+        text: 'text-info',
+        border: 'border-info/20',
+        badge: 'bg-info text-info-foreground'
       };
     default:
       return {
-        bg: 'bg-gray-50',
-        text: 'text-gray-800',
-        border: 'border-gray-200',
-        badge: 'bg-gray-100 text-gray-800'
+        bg: 'bg-muted/10',
+        text: 'text-muted-foreground',
+        border: 'border-muted/20',
+        badge: 'bg-muted text-muted-foreground'
       };
   }
 }
