@@ -41,9 +41,27 @@ export async function scanCode(code, language = 'javascript', riskConfig = null,
   // If we get a 500 error (likely taxonomy processing issue), retry with raw results
   if (resp.status === 500) {
     console.warn('Server error detected, retrying with raw results...');
+    try {
+      const errorBody = await resp.text();
+      console.warn('Original error:', errorBody);
+    } catch (e) {
+      console.warn('Could not parse error body');
+    }
+    
     const rawPayload = { ...payload, rawResults: true, skipTaxonomy: true };
     const rawResp = await postJson('/scan-code', rawPayload);
     if (rawResp.ok) return await rawResp.json();
+    
+    // If raw results also fail, try with minimal processing
+    const minimalPayload = { 
+      ...payload, 
+      rawResults: true, 
+      skipTaxonomy: true,
+      skipRiskCalculation: true,
+      minimalProcessing: true 
+    };
+    const minimalResp = await postJson('/scan-code', minimalPayload);
+    if (minimalResp.ok) return await minimalResp.json();
   }
   
   if (resp.status === 404 || resp.status === 405) {
