@@ -207,9 +207,9 @@ export default function Dashboard() {
                         <h1 className="text-lg font-semibold text-[#374151]">NEPERIA</h1>
                         <span className="text-sm text-[#9CA3AF]">Code Scanner
           </span>
-                        <div className={`ml-4 px-2 py-1 rounded-full text-xs font-medium ${backendStatus === 'connected' ? 'bg-green-100 text-green-700' : backendStatus === 'disconnected' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                            {backendStatus === 'connected' ? '● Backend Online' : backendStatus === 'disconnected' ? '● Backend Offline' : '● Checking...'}
-                        </div>
+                            <div className={`ml-4 px-2 py-1 rounded-full text-xs font-medium ${backendStatus === 'online' ? 'bg-green-100 text-green-700' : backendStatus === 'offline' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                                {backendStatus === 'online' ? '● Backend Online' : backendStatus === 'offline' ? '● Backend Offline' : '● Checking...'}
+                            </div>
                     </div>
                     <div className="flex items-center gap-2">
                         <RiskSettingsDrawer>

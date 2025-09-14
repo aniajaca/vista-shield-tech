@@ -34,14 +34,15 @@ export async function scanCode(code, language = 'javascript', riskConfig = null,
   if (context) payload.context = context;
 
   // Try /scan-code first, then fallback to /scan if it fails
-  try {
-    const resp = await postJson('/scan-code', payload);
-    return await handleResponse(resp);
-  } catch (e1) {
-    console.warn('Primary /scan-code failed, retrying /scan ...', e1?.message);
+  // Try /scan-code; only fallback to /scan when endpoint is missing
+  const resp = await postJson('/scan-code', payload);
+  if (resp.ok) return await resp.json();
+  if (resp.status === 404 || resp.status === 405) {
     const resp2 = await postJson('/scan', payload);
     return await handleResponse(resp2);
   }
+  // Surface the original error from /scan-code (avoid incorrect fallback to project scan)
+  return await handleResponse(resp);
 }
 
 export async function scanDependencies(packageJson, packageLockJson, riskConfig = null, context = null) {
