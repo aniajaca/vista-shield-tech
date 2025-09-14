@@ -62,6 +62,12 @@ export default function RiskOverviewCard({ riskAssessment = {}, metadata, perfor
     
     const { scanTime, rulesExecuted } = performance;
     
+    // Normalize engine and scan time from metadata
+    const engineRaw = metadata?.engine || metadata?.scanner || metadata?.tool;
+    const engineStr = typeof engineRaw === 'string' ? engineRaw.toLowerCase() : (engineRaw?.name?.toLowerCase?.());
+    const engineDisplay = engineStr?.includes('semgrep') ? 'Semgrep Scanner' : engineStr?.includes('ast') ? 'AST Scanner' : (engineRaw || 'N/A');
+    const scanTimeDisplay = metadata?.scan_time || (typeof scanTime === 'number' ? `${scanTime.toFixed(2)}s` : 'N/A');
+    
     return (
         <div className="bg-white p-6 rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
@@ -86,13 +92,11 @@ export default function RiskOverviewCard({ riskAssessment = {}, metadata, perfor
                     <h3 className="text-xs font-medium uppercase text-[#6B7280] tracking-wider mb-2">Analysis Metrics</h3>
                     <Metric 
                         label="Scan Time" 
-                        value={metadata?.scan_time || (typeof scanTime === 'number' ? `${scanTime.toFixed(2)}s` : 'N/A')}
+                        value={scanTimeDisplay}
                     />
                     <Metric 
                         label="Engine Used" 
-                        value={metadata?.engine === 'semgrep' ? 'Semgrep Scanner' : 
-                               metadata?.engine === 'ast' ? 'AST Scanner' : 
-                               metadata?.engine || 'N/A'}
+                        value={engineDisplay}
                     />
                     <Metric 
                         label="Rules Applied" 
