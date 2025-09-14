@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ChevronDown, MapPin, Lightbulb } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 // Safe formatter to render possibly nested objects as readable text
 const toText = (val: any): string => {
@@ -63,11 +64,16 @@ const FindingItem = ({ finding }) => {
     const title = toText(rawTitle || name || check_id || message) || "Security Vulnerability";
     const description = toText(cwe?.description ?? rawDesc ?? message) || 'Security vulnerability detected';
     
-    // Handle remediation - extract from object if needed
+    // Handle remediation - extract from object if needed and format cleanly
     let remediation = '';
+    let remediationPriority = '';
+    let remediationImpact = '';
+    
     if (rawRemediation) {
         if (typeof rawRemediation === 'object') {
-            remediation = toText(rawRemediation.description || rawRemediation.text || rawRemediation.guidance || rawRemediation);
+            remediation = toText(rawRemediation.description || rawRemediation.guidance || rawRemediation.text || rawRemediation);
+            remediationPriority = toText(rawRemediation.priority) || '';
+            remediationImpact = toText(rawRemediation.impact) || '';
         } else {
             remediation = toText(rawRemediation);
         }
@@ -94,6 +100,11 @@ const FindingItem = ({ finding }) => {
                 <div className="flex items-center justify-between w-full text-left">
                     <div className="flex items-center gap-4">
                         <SeverityPill severity={severity} />
+                        {cweDisplayId && (
+                            <Badge variant="outline" className="text-xs font-mono">
+                                {cweDisplayId}
+                            </Badge>
+                        )}
                         <span className="font-medium text-[#374151]">{title}</span>
                     </div>
                     <div className="flex items-center gap-4">
@@ -180,8 +191,25 @@ const FindingItem = ({ finding }) => {
                             )}
 
                             <div>
-                                <h4 className="text-[11px] font-semibold uppercase text-[#9CA3AF] mb-2 tracking-[0.05em] flex items-center gap-2"><Lightbulb className="w-4 h-4 text-[#AFCB0E]" strokeWidth={1.5} /> Recommended Fix</h4>
-                                <p className="text-sm text-[#374151]">{remediation}</p>
+                                <h4 className="text-[11px] font-semibold uppercase text-[#9CA3AF] mb-3 tracking-[0.05em] flex items-center gap-2">
+                                    <Lightbulb className="w-4 h-4 text-[#AFCB0E]" strokeWidth={1.5} /> 
+                                    Recommended Fix
+                                </h4>
+                                <div className="space-y-3">
+                                    <p className="text-sm text-[#374151] leading-relaxed">{remediation}</p>
+                                    {remediationPriority && (
+                                        <div className="flex items-start gap-2">
+                                            <span className="text-xs font-medium text-[#6B7280] uppercase tracking-wide">Priority:</span>
+                                            <span className="text-xs text-[#374151]">{remediationPriority}</span>
+                                        </div>
+                                    )}
+                                    {remediationImpact && (
+                                        <div className="flex items-start gap-2">
+                                            <span className="text-xs font-medium text-[#6B7280] uppercase tracking-wide">Impact:</span>
+                                            <span className="text-xs text-[#374151]">{remediationImpact}</span>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                        </div>
                    </div>
