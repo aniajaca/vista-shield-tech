@@ -9,7 +9,10 @@ export default function ScannerInterface({ onScan, isLoading }) {
 
     const handleFileChange = (files) => {
         if (files && files[0]) {
-            setFile(files[0]);
+            const selected = files[0];
+            setFile(selected);
+            // Immediately trigger scan on file selection
+            onScan({ file: selected });
         }
     };
     
