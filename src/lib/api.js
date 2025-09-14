@@ -30,6 +30,7 @@ export async function scanCode(code, language = 'javascript', riskConfig = null,
     language,
     filename: filename || `code.${language}`,
     mode: 'snippet',
+    engine: 'semgrep', // Force Semgrep usage even with code strings
     semgrep: { ruleset, timeoutSeconds: 60 }
   };
   if (riskConfig) payload.riskConfig = riskConfig;
