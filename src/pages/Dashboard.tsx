@@ -126,6 +126,11 @@ export default function Dashboard() {
       const response = await scanFile(options.file, riskConfig, context);
       if (response.success) {
         console.log('📊 Setting scan result:', response.data);
+        
+        // Debug: Log metadata to check engine and scan_time
+        console.log('🔧 Scan metadata:', response.data.metadata);
+        console.log('⏱️ Scan time from metadata:', response.data.metadata?.scan_time);
+        console.log('🔍 Engine from metadata:', response.data.metadata?.engine);
 
         // Debug: Log findings data structure for verification
         if (response.data.findings && response.data.findings.length > 0) {
