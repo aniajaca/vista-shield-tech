@@ -86,7 +86,13 @@ export default function RiskOverviewCard({ riskAssessment = {}, metadata, perfor
                     <h3 className="text-xs font-medium uppercase text-[#6B7280] tracking-wider mb-2">Analysis Metrics</h3>
                     <Metric 
                         label="Scan Time" 
-                        value={typeof scanTime === 'number' ? `${scanTime.toFixed(2)}s` : 'N/A'}
+                        value={metadata?.scan_time || (typeof scanTime === 'number' ? `${scanTime.toFixed(2)}s` : 'N/A')}
+                    />
+                    <Metric 
+                        label="Engine Used" 
+                        value={metadata?.engine === 'semgrep' ? 'Semgrep Scanner' : 
+                               metadata?.engine === 'ast' ? 'AST Scanner' : 
+                               metadata?.engine || 'N/A'}
                     />
                     <Metric 
                         label="Rules Applied" 
