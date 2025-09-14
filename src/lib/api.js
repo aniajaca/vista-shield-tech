@@ -37,6 +37,15 @@ export async function scanCode(code, language = 'javascript', riskConfig = null,
   // Try /scan-code; only fallback to /scan when endpoint is missing
   const resp = await postJson('/scan-code', payload);
   if (resp.ok) return await resp.json();
+  
+  // If we get a 500 error (likely taxonomy processing issue), retry with raw results
+  if (resp.status === 500) {
+    console.warn('Server error detected, retrying with raw results...');
+    const rawPayload = { ...payload, rawResults: true, skipTaxonomy: true };
+    const rawResp = await postJson('/scan-code', rawPayload);
+    if (rawResp.ok) return await rawResp.json();
+  }
+  
   if (resp.status === 404 || resp.status === 405) {
     const resp2 = await postJson('/scan', payload);
     return await handleResponse(resp2);
