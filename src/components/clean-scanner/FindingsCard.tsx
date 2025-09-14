@@ -8,7 +8,7 @@ const toText = (val: any): string => {
   if (t === 'string' || t === 'number' || t === 'boolean') return String(val);
   if (Array.isArray(val)) return val.map(toText).filter(Boolean).join('; ');
   if (t === 'object') {
-    const preferred = ['strategy', 'fix', 'recommendation', 'text', 'message', 'summary', 'details', 'explanation', 'reason'];
+    const preferred = ['description', 'text', 'guidance', 'strategy', 'fix', 'recommendation', 'message', 'summary', 'details', 'explanation', 'reason'];
     for (const k of preferred) {
       if (k in val && (val as any)[k] != null) return toText((val as any)[k]);
     }
@@ -55,19 +55,33 @@ const FindingItem = ({ finding }) => {
         description: rawDesc,
         remediation: rawRemediation,
         location: rawLocation, start,
-        code, extractedCode, codeSnippet, extra
+        code, extractedCode, codeSnippet, snippet, extra,
+        file, startLine, line,
+        adjustedScore, adjustedSeverity
     } = finding;
 
     const title = toText(rawTitle || name || check_id || message) || "Security Vulnerability";
     const description = toText(cwe?.description ?? rawDesc ?? message) || 'Security vulnerability detected';
-    const remediation = toText(rawRemediation) || 'Review and apply security best practices';
     
+    // Handle remediation - extract from object if needed
+    let remediation = '';
+    if (rawRemediation) {
+        if (typeof rawRemediation === 'object') {
+            remediation = toText(rawRemediation.description || rawRemediation.text || rawRemediation.guidance || rawRemediation);
+        } else {
+            remediation = toText(rawRemediation);
+        }
+    }
+    if (!remediation) remediation = 'Review and apply security best practices';
+    
+    // Handle file location - check multiple possible fields
     const location = rawLocation || start;
-    const filePath = location?.path || location?.file || finding.file || "Unknown file";
-    const lineNumber = location?.line || location?.row;
+    const filePath = location?.path || location?.file || file || finding.file || "Code scan";
+    const lineNumber = location?.line || location?.row || startLine || line || finding.startLine;
     const locationStr = lineNumber ? `${filePath}:${lineNumber}` : filePath;
 
-    const vulnerableCode = toText(code ?? extractedCode ?? codeSnippet ?? extra?.lines) || '';
+    // Handle vulnerable code - check multiple possible fields including snippet
+    const vulnerableCode = toText(snippet || code || extractedCode || codeSnippet || extra?.lines) || '';
 
     const cweDisplayId = cwe?.id ? (String(cwe.id).startsWith('CWE-') ? cwe.id : `CWE-${cwe.id}`) : null;
 
@@ -102,24 +116,36 @@ const FindingItem = ({ finding }) => {
                             )}
                             {owasp && (
                                 <InfoBlock title="OWASP">
-                                    <p><span className="font-semibold">{owasp.category}</span> – {owasp.title}</p>
+                                    {Array.isArray(owasp) ? (
+                                        <p><span className="font-semibold">{owasp[0] || owasp.join(', ')}</span></p>
+                                    ) : owasp.category ? (
+                                        <p><span className="font-semibold">{owasp.category}</span> – {owasp.title}</p>
+                                    ) : (
+                                        <p><span className="font-semibold">{String(owasp)}</span></p>
+                                    )}
                                 </InfoBlock>
                             )}
-                            {cvss && (cvss.baseScore || cvss.adjustedScore) && (
+                            {((cvss && (cvss.baseScore || cvss.adjustedScore)) || adjustedScore) && (
                                 <InfoBlock title="CVSS Score">
-                                    {typeof cvss.baseScore === 'number' && (
+                                    {typeof cvss?.baseScore === 'number' && (
                                         <p>Base: <span className="font-semibold tabular-nums">{cvss.baseScore.toFixed(1)}</span></p>
                                     )}
-                                    {typeof cvss.baseScore !== 'number' && cvss.baseScore && (
+                                    {typeof cvss?.baseScore !== 'number' && cvss?.baseScore && (
                                         <p>Base: <span className="font-semibold tabular-nums">{String(cvss.baseScore)}</span></p>
                                     )}
-                                    {typeof cvss.adjustedScore === 'number' && cvss.adjustedScore !== cvss.baseScore && (
+                                    {typeof cvss?.adjustedScore === 'number' && cvss.adjustedScore !== cvss.baseScore && (
                                         <p>Adjusted: <span className="font-semibold tabular-nums text-orange-600">{cvss.adjustedScore.toFixed(1)}</span></p>
                                     )}
-                                    {typeof cvss.adjustedScore !== 'number' && cvss.adjustedScore && cvss.adjustedScore !== cvss.baseScore && (
+                                    {typeof cvss?.adjustedScore !== 'number' && cvss?.adjustedScore && cvss.adjustedScore !== cvss.baseScore && (
                                         <p>Adjusted: <span className="font-semibold tabular-nums text-orange-600">{String(cvss.adjustedScore)}</span></p>
                                     )}
-                                    {cvss.vector && <p className="text-xs text-muted-foreground">Vector: {String(cvss.vector)}</p>}
+                                    {typeof adjustedScore === 'number' && !cvss?.adjustedScore && (
+                                        <p>Adjusted: <span className="font-semibold tabular-nums text-orange-600">{adjustedScore.toFixed(1)}</span></p>
+                                    )}
+                                    {adjustedSeverity && (
+                                        <p>Severity: <span className="font-semibold">{adjustedSeverity}</span></p>
+                                    )}
+                                    {cvss?.vector && <p className="text-xs text-muted-foreground">Vector: {String(cvss.vector)}</p>}
                                 </InfoBlock>
                             )}
                             

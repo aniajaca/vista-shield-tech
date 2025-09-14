@@ -50,8 +50,14 @@ const Metric = ({ label, value }) => (
     </div>
 );
 
-export default function RiskOverviewCard({ riskAssessment = {}, performance = {} }: RiskOverviewCardProps) {
+export default function RiskOverviewCard({ riskAssessment = {}, metadata, performance = {} }: RiskOverviewCardProps) {
+    // Extract risk data from multiple possible locations
     const { riskScore, riskLevel, findingsBreakdown = {} } = riskAssessment;
+    
+    // Also check metadata for risk information
+    const finalScore = riskScore || metadata?.risk?.final || metadata?.score?.final || 0;
+    const finalLevel = riskLevel || metadata?.risk?.level || metadata?.riskLevel || 'None';
+    
     const totalVulns = Object.values(findingsBreakdown).reduce((a, b) => (typeof b === 'number' ? a + b : a), 0);
     
     const { scanTime, rulesExecuted } = performance;
@@ -60,7 +66,7 @@ export default function RiskOverviewCard({ riskAssessment = {}, performance = {}
         <div className="bg-white p-6 rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
                 <div className="md:col-span-1 flex items-center justify-center">
-                    <RiskScoreIndicator score={riskScore} level={riskLevel} />
+                    <RiskScoreIndicator score={finalScore} level={finalLevel} />
                 </div>
                 
                 <div className="md:col-span-1 space-y-4">

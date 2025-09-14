@@ -10,7 +10,7 @@ const toText = (val: any): string => {
   if (t === 'string' || t === 'number' || t === 'boolean') return String(val);
   if (Array.isArray(val)) return val.map(toText).filter(Boolean).join(', ');
   if (t === 'object') {
-    const preferred = ['strategy', 'fix', 'recommendation', 'text', 'message', 'summary', 'details', 'explanation', 'reason'];
+    const preferred = ['description', 'text', 'guidance', 'strategy', 'fix', 'recommendation', 'message', 'summary', 'details', 'explanation', 'reason'];
     for (const k of preferred) {
       if (k in val && (val as any)[k] != null) return toText((val as any)[k]);
     }
@@ -119,7 +119,11 @@ const VulnerabilityItem = ({ vulnerability }) => {
                             </InfoBlock>
 
                             <InfoBlock title="Recommended Fix">
-                                <p>{recommendationText || 'Update to a secure version'}</p>
+                                {typeof recommendation === 'object' ? (
+                                    <p>{toText(recommendation.description || recommendation.text || recommendation.guidance || recommendation)}</p>
+                                ) : (
+                                    <p>{recommendationText || 'Update to a secure version'}</p>
+                                )}
                             </InfoBlock>
                        </div>
                    </div>
