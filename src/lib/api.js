@@ -62,6 +62,16 @@ export async function scanCode(code, language = 'javascript', riskConfig = null,
     };
     const minimalResp = await postJson('/scan-code', minimalPayload);
     if (minimalResp.ok) return await minimalResp.json();
+
+    // Final fallback: try legacy /scan even if status is 500
+    try {
+      console.warn('Trying legacy /scan fallback after /scan-code 500...');
+      const legacyResp = await postJson('/scan', payload);
+      if (legacyResp.ok) return await legacyResp.json();
+      console.warn('Legacy /scan also failed with status', legacyResp.status);
+    } catch (e) {
+      console.warn('Legacy /scan fallback threw:', e);
+    }
   }
   
   if (resp.status === 404 || resp.status === 405) {
