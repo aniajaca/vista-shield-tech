@@ -8,11 +8,9 @@ import DependenciesExportSection from "../components/dependencies/DependenciesEx
 import { RiskSettingsDrawer } from "@/components/RiskSettingsDrawer";
 import { useRiskSettings } from "@/hooks/useRiskSettings";
 import { AlertCircle, Settings } from "lucide-react";
-import { runConnectionTest } from "@/utils/testConnection";
+import { scanDependencies, testConnection, getHealthStatus } from "@/lib/api";
 
-const API_BASE_URL = 'https://semgrep-backend-production.up.railway.app';
-
-async function scanDependencies(packageJsonContent: string, packageLockContent?: string, riskConfig = null, context = null) {
+async function scanDependenciesWrapper(packageJsonContent: string, packageLockContent?: string, riskConfig = null, context = null) {
   try {
     console.log('📦 Scanning dependencies...');
     
@@ -44,40 +42,8 @@ async function scanDependencies(packageJsonContent: string, packageLockContent?:
     } catch (e) {
       console.warn('⚠️ Could not iterate dependencies:', e);
     }
-    const payload: any = {
-      packageJson: packageJsonObj,
-      packageLockJson: packageLockObj
-    };
     
-    // Add risk config and context if provided
-    if (riskConfig) {
-      payload.riskConfig = riskConfig;
-    }
-    if (context) {
-      payload.context = context;
-    }
-    
-    console.log('📦 Dependencies payload with risk settings:', payload);
-    
-    const response = await fetch(`${API_BASE_URL}/scan-dependencies`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      mode: 'cors',
-      body: JSON.stringify(payload)
-    });
-
-    console.log('📨 Response status:', response.status, response.statusText);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('❌ Error response:', errorText);
-      throw new Error(`HTTP ${response.status}: ${errorText}`);
-    }
-
-    const data = await response.json();
+    const data = await scanDependencies(packageJsonObj, packageLockObj, riskConfig, context);
     console.log('✅ Dependencies scan successful:', data);
     
     return {
@@ -110,8 +76,15 @@ export default function Dependencies() {
     useEffect(() => {
         const testBackend = async () => {
             console.log('🔍 Testing backend connection...');
-            const isConnected = await runConnectionTest();
-            setBackendStatus(isConnected ? 'connected' : 'disconnected');
+            try {
+                const isHealthy = await testConnection();
+                const healthStatus = await getHealthStatus();
+                console.log('✅ Backend health status:', healthStatus);
+                setBackendStatus(isHealthy ? 'online' : 'offline');
+            } catch (error) {
+                console.error('❌ Backend connection failed:', error);
+                setBackendStatus('offline');
+            }
         };
         
         testBackend();
@@ -147,7 +120,7 @@ export default function Dependencies() {
             console.log('🎯 Using risk config for dependencies:', riskConfig);
             console.log('🌍 Using context for dependencies:', context);
             
-            const resp = await scanDependencies(
+            const resp = await scanDependenciesWrapper(
                 options.packageJson, 
                 options.packageLock,
                 riskConfig,

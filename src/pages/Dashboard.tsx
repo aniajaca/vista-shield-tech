@@ -9,11 +9,10 @@ import ExportSection from "../components/clean-scanner/ExportSection";
 import { RiskSettingsDrawer } from "@/components/RiskSettingsDrawer";
 import { useRiskSettings } from "@/hooks/useRiskSettings";
 import { AlertCircle, Settings } from "lucide-react";
-import { runConnectionTest } from "@/utils/testConnection";
-const API_BASE_URL = 'https://semgrep-backend-production.up.railway.app';
+import { scanCode, testConnection, getHealthStatus } from "@/lib/api";
 
 /**
- * Scan uploaded file by reading its content and sending to /scan-code endpoint
+ * Scan uploaded file using the centralized API
  */
 async function scanFile(file, riskConfig = null, context = null) {
   try {
@@ -24,36 +23,9 @@ async function scanFile(file, riskConfig = null, context = null) {
 
     // Read file content as text
     const code = await file.text();
-    console.log('🚀 Sending to /scan-code endpoint with JSON payload');
-    const payload: any = {
-      code: code,
-      filename: file.name
-    };
-
-    // Add risk config and context if provided
-    if (riskConfig) {
-      payload.riskConfig = riskConfig;
-    }
-    if (context) {
-      payload.context = context;
-    }
-    console.log('📦 Payload with risk settings:', payload);
-    const response = await fetch(`${API_BASE_URL}/scan-code`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      mode: 'cors',
-      body: JSON.stringify(payload)
-    });
-    console.log('📨 Response status:', response.status, response.statusText);
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('❌ Error response:', errorText);
-      throw new Error(`HTTP ${response.status}: ${errorText}`);
-    }
-    const data = await response.json();
+    console.log('🚀 Sending to API with risk settings');
+    
+    const data = await scanCode(code, 'javascript', riskConfig, context);
     console.log('✅ Scan successful, received data:', data);
 
     // Debug the response structure
@@ -98,8 +70,15 @@ export default function Dashboard() {
   useEffect(() => {
     const testBackend = async () => {
       console.log('🔍 Testing backend connection...');
-      const isConnected = await runConnectionTest();
-      setBackendStatus(isConnected ? 'connected' : 'disconnected');
+      try {
+        const isHealthy = await testConnection();
+        const healthStatus = await getHealthStatus();
+        console.log('✅ Backend health status:', healthStatus);
+        setBackendStatus(isHealthy ? 'online' : 'offline');
+      } catch (error) {
+        console.error('❌ Backend connection failed:', error);
+        setBackendStatus('offline');
+      }
     };
     testBackend();
   }, []);
