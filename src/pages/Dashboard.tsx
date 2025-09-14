@@ -31,18 +31,24 @@ function inferLanguageFromFilename(name = '') {
 
 async function scanFile(file, riskConfig = null, context = null) {
   try {
-    console.log('📄 Reading file content:', {
+    console.log('📄 scanFile called! File details:', {
       name: file.name,
-      size: file.size
+      size: file.size,
+      type: file.type
     });
+    console.log('🔧 Risk config:', riskConfig);
+    console.log('🌍 Context:', context);
 
     // Read file content as text
     const code = await file.text();
+    console.log('📖 File content read, length:', code.length);
+    console.log('📝 First 100 chars:', code.substring(0, 100));
+    
     const language = inferLanguageFromFilename(file.name);
-    console.log('🚀 Sending to API with risk settings', { language, filename: file.name });
+    console.log('🚀 About to call scanCode API with:', { language, filename: file.name });
     
     const data = await scanCode(code, language, riskConfig, context, file.name);
-    console.log('✅ Scan successful, received data:', data);
+    console.log('✅ scanCode API returned:', data);
 
     // Debug the response structure
     console.log('🔍 API Response Structure:');
@@ -99,6 +105,7 @@ export default function Dashboard() {
     testBackend();
   }, []);
   const handleScan = async options => {
+    console.log('🚀 handleScan called with options:', options);
     setIsLoading(true);
     setError(null);
     setScanResult(null);
@@ -117,13 +124,16 @@ export default function Dashboard() {
         throw new Error("No file selected for scanning.");
       }
       console.log('🔍 Starting scan for file:', options.file.name);
+      console.log('📁 File details:', { name: options.file.name, size: options.file.size, type: options.file.type });
 
       // Get current risk settings
       const riskConfig = getRiskConfig();
       const context = getRiskContext();
       console.log('🎯 Using risk config:', riskConfig);
       console.log('🌍 Using context:', context);
+      console.log('🔄 About to call scanFile...');
       const response = await scanFile(options.file, riskConfig, context);
+      console.log('📨 scanFile response:', response);
       if (response.success) {
         console.log('📊 Setting scan result:', response.data);
         
