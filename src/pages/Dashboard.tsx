@@ -233,7 +233,15 @@ export default function Dashboard() {
                         </div>}
 
                     {hasResults && <div className="space-y-8">
-                            <RiskOverviewCard riskAssessment={scanResult.riskAssessment} performance={scanResult.performance} />
+                            <RiskOverviewCard 
+                                riskAssessment={{
+                                    riskScore: scanResult.score?.final,
+                                    riskLevel: scanResult.risk?.level,
+                                    findingsBreakdown: scanResult.riskAssessment?.findingsBreakdown || scanResult.stats
+                                }} 
+                                performance={scanResult.performance} 
+                                metadata={scanResult} 
+                            />
                             <FindingsCard findings={scanResult.findings || []} />
                             <ExportSection findings={scanResult.findings || []} riskAssessment={scanResult.riskAssessment || {}} />
                         </div>}

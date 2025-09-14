@@ -223,8 +223,8 @@ export default function Dependencies() {
                         <div className="space-y-8">
                             <DependenciesRiskOverviewCard
                                 riskAssessment={{
-                                    riskScore: scanResult.risk_score || 0,
-                                    riskLevel: scanResult.risk_level || 'Low',
+                                    riskScore: scanResult.score?.final || scanResult.risk_score || 0,
+                                    riskLevel: scanResult.risk?.level || scanResult.risk_level || 'Low',
                                     findingsBreakdown: scanResult.stats || {}
                                 }}
                                 performance={{
