@@ -101,6 +101,7 @@ export default function Dashboard() {
   }, []);
   const handleScan = async options => {
     console.log('🚀 handleScan called with options:', options);
+    console.log('📁 File details:', options.file ? { name: options.file.name, size: options.file.size, type: options.file.type } : 'NO FILE');
     setIsLoading(true);
     setError(null);
     setScanResult(null);
@@ -131,6 +132,8 @@ export default function Dashboard() {
       console.log('📨 scanFile response:', response);
       if (response.success) {
         console.log('📊 Setting scan result:', response.data);
+        console.log('📊 Findings count:', response.data?.findings?.length || 0);
+        console.log('📊 First finding:', response.data?.findings?.[0]);
         
         // Debug: Log metadata to check engine and scan_time
         console.log('🔧 Scan metadata:', response.data.metadata);
