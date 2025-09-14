@@ -23,6 +23,8 @@ async function postJson(path, payload) {
 
 export async function scanCode(code, language = 'javascript', riskConfig = null, context = null, filename = null) {
   const ruleset = (language && language.toLowerCase().startsWith('js')) ? 'p/javascript' : 'auto';
+  console.log('🔧 scanCode called with:', { language, filename, ruleset });
+  
   const payload = {
     code,
     language,
@@ -33,10 +35,16 @@ export async function scanCode(code, language = 'javascript', riskConfig = null,
   if (riskConfig) payload.riskConfig = riskConfig;
   if (context) payload.context = context;
 
+  console.log('📤 Sending payload to /scan-code:', JSON.stringify(payload, null, 2));
+
   // Try /scan-code first, then fallback to /scan if it fails
   // Try /scan-code; only fallback to /scan when endpoint is missing
   const resp = await postJson('/scan-code', payload);
-  if (resp.ok) return await resp.json();
+  if (resp.ok) {
+    const result = await resp.json();
+    console.log('✅ /scan-code success, metadata:', result.metadata);
+    return result;
+  }
   
   // If we get a 500 error (likely taxonomy processing issue), retry with raw results
   if (resp.status === 500) {
