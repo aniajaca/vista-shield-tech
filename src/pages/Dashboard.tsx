@@ -9,7 +9,7 @@ import ExportSection from "../components/clean-scanner/ExportSection";
 import { RiskSettingsDrawer } from "@/components/RiskSettingsDrawer";
 import { useRiskSettings } from "@/hooks/useRiskSettings";
 import { AlertCircle, Settings } from "lucide-react";
-import { scanCode, testConnection, getHealthStatus } from "@/lib/api";
+import { scanFileUpload, scanCode, testConnection, getHealthStatus } from "@/lib/api";
 
 /**
  * Scan uploaded file using the centralized API
@@ -39,16 +39,11 @@ async function scanFile(file, riskConfig = null, context = null) {
     console.log('🔧 Risk config:', riskConfig);
     console.log('🌍 Context:', context);
 
-    // Read file content as text
-    const code = await file.text();
-    console.log('📖 File content read, length:', code.length);
-    console.log('📝 First 100 chars:', code.substring(0, 100));
-    
     const language = inferLanguageFromFilename(file.name);
-    console.log('🚀 About to call scanCode API with:', { language, filename: file.name });
+    console.log('🚀 Preferring /scan-file with language:', language);
     
-    const data = await scanCode(code, language, riskConfig, context, file.name);
-    console.log('✅ scanCode API returned:', data);
+    const data = await scanFileUpload(file, language, riskConfig, context);
+    console.log('✅ Scan API returned:', data);
 
     // Debug the response structure
     console.log('🔍 API Response Structure:');

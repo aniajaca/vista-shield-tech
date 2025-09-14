@@ -30,7 +30,7 @@ export async function scanCode(code, language = 'javascript', riskConfig = null,
     language,
     filename: filename || `code.${language}`,
     mode: 'snippet',
-    engine: 'semgrep', // Force Semgrep usage even with code strings
+    engine: 'auto', // Let backend choose appropriate engine
     semgrep: { ruleset, timeoutSeconds: 60 }
   };
   if (riskConfig) payload.riskConfig = riskConfig;
@@ -87,8 +87,45 @@ export async function scanCode(code, language = 'javascript', riskConfig = null,
     const resp2 = await postJson('/scan', payload);
     return await handleResponse(resp2);
   }
-  // Surface the original error from /scan-code (avoid incorrect fallback to project scan)
   return await handleResponse(resp);
+}
+
+export async function scanFileUpload(file, language = 'javascript', riskConfig = null, context = null) {
+  console.log('📦 scanFileUpload -> /scan-file', { name: file?.name, size: file?.size, type: file?.type, language });
+  const form = new FormData();
+  form.append('file', file, file.name || 'code.' + language);
+  form.append('language', language);
+  form.append('engine', 'semgrep'); // ensure Semgrep engine for real file scanning
+  if (riskConfig) form.append('riskConfig', JSON.stringify(riskConfig));
+  if (context) form.append('context', JSON.stringify(context));
+
+  try {
+    const resp = await fetch(`${API_URL}/scan-file`, {
+      method: 'POST',
+      mode: 'cors',
+      headers: { 'Accept': 'application/json' },
+      body: form
+    });
+    if (resp.ok) {
+      const result = await resp.json();
+      console.log('✅ /scan-file success, metadata:', result.metadata);
+      return result;
+    }
+
+    // If /scan-file is missing or not allowed, fall back to code snippet path
+    if (resp.status === 404 || resp.status === 405) {
+      console.warn('ℹ️ /scan-file not available, falling back to /scan-code');
+      const code = await file.text();
+      return await scanCode(code, language, riskConfig, context, file.name);
+    }
+
+    // Otherwise throw using our handler to surface details
+    return await handleResponse(resp);
+  } catch (e) {
+    console.warn('⚠️ /scan-file failed, falling back to /scan-code. Reason:', e);
+    const code = await file.text();
+    return await scanCode(code, language, riskConfig, context, file.name);
+  }
 }
 
 export async function scanDependencies(packageJson, packageLockJson, riskConfig = null, context = null) {
