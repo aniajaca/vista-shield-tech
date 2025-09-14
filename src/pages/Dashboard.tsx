@@ -14,6 +14,21 @@ import { scanCode, testConnection, getHealthStatus } from "@/lib/api";
 /**
  * Scan uploaded file using the centralized API
  */
+function inferLanguageFromFilename(name = '') {
+  const ext = (name.split('.').pop() || '').toLowerCase();
+  switch (ext) {
+    case 'js': case 'jsx': return 'javascript';
+    case 'ts': case 'tsx': return 'typescript';
+    case 'py': return 'python';
+    case 'java': return 'java';
+    case 'go': return 'go';
+    case 'rb': return 'ruby';
+    case 'php': return 'php';
+    case 'cs': return 'csharp';
+    default: return 'javascript';
+  }
+}
+
 async function scanFile(file, riskConfig = null, context = null) {
   try {
     console.log('📄 Reading file content:', {
@@ -23,9 +38,10 @@ async function scanFile(file, riskConfig = null, context = null) {
 
     // Read file content as text
     const code = await file.text();
-    console.log('🚀 Sending to API with risk settings');
+    const language = inferLanguageFromFilename(file.name);
+    console.log('🚀 Sending to API with risk settings', { language, filename: file.name });
     
-    const data = await scanCode(code, 'javascript', riskConfig, context);
+    const data = await scanCode(code, language, riskConfig, context, file.name);
     console.log('✅ Scan successful, received data:', data);
 
     // Debug the response structure
