@@ -94,7 +94,7 @@ const PriorityBadge = ({ adjustedScore }: { adjustedScore: number }) => {
 const CategoryChip = ({ finding }: { finding: Finding }) => {
   // Map CWE/OWASP to common categories
   const getCategoryFromFinding = (finding: Finding) => {
-    const cweId = finding.cwe?.id?.toString().replace('CWE-', '');
+    const cweId = finding.cwe?.id ? finding.cwe.id.toString().replace('CWE-', '') : undefined;
     const owaspCategory = finding.owasp?.category?.toLowerCase();
     
     // Common XSS CWEs
@@ -413,7 +413,7 @@ ${finding.owasp?.category ? `OWASP: ${finding.owasp.category}` : ''}`;
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => window.open(`https://cwe.mitre.org/data/definitions/${finding.cwe?.id?.toString().replace('CWE-', '')}.html`, '_blank')}
+                      onClick={() => { const id = finding.cwe?.id ? String(finding.cwe.id).replace('CWE-', '') : ''; if (id) window.open(`https://cwe.mitre.org/data/definitions/${id}.html`, '_blank'); }}
                     >
                       <ExternalLink className="w-4 h-4" />
                     </Button>
