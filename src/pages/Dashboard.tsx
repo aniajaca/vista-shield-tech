@@ -190,7 +190,8 @@ export default function Dashboard() {
     } finally {
       clearInterval(progressInterval);
       setProgress(100);
-      setTimeout(() => setIsLoading(false), 500);
+      // Remove the delay to prevent white screen
+      setIsLoading(false);
     }
   };
   const hasResults = scanResult && !isLoading;
@@ -280,7 +281,14 @@ export default function Dashboard() {
       )}
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {!hasResults && <ScannerInterface onScan={handleScan} isLoading={isLoading} />}
+        {!hasResults && !isLoading && <ScannerInterface onScan={handleScan} isLoading={isLoading} />}
+        
+        {isLoading && !hasResults && (
+          <div className="text-center py-12">
+            <div className="text-lg font-medium text-foreground mb-2">Scanning in progress...</div>
+            <div className="text-sm text-muted-foreground">Analyzing your code for security vulnerabilities</div>
+          </div>
+        )}
 
         {error && (
           <div className="bg-destructive/10 text-destructive rounded-lg p-4 flex items-center gap-3 mb-8">
