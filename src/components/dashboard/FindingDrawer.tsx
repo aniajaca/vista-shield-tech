@@ -209,7 +209,7 @@ export default function FindingDrawer({ finding, isOpen, onClose }: FindingDrawe
   const vulnerableCode = toText(finding.snippet || finding.code || finding.extractedCode || finding.codeSnippet || finding.extra?.lines) || '';
 
   const cweDisplayId = finding.cwe?.id ? (String(finding.cwe.id).startsWith('CWE-') ? finding.cwe.id : `CWE-${finding.cwe.id}`) : null;
-  const adjustedScore = finding.adjustedScore || finding.cvss?.baseScore || 0;
+  const adjustedScore = Number(finding.adjustedScore ?? finding.cvss?.baseScore ?? 0) || 0;
 
   const copyToClipboard = (text: string, type: string) => {
     navigator.clipboard.writeText(text);

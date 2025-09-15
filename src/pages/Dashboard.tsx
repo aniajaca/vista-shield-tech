@@ -219,10 +219,17 @@ export default function Dashboard() {
   const getSummaryData = () => {
     if (!scanResult) return null;
     
-    const riskScore = scanResult.score?.final || scanResult.riskAssessment?.riskScore || 0;
+    const riskScoreRaw = scanResult.score?.final ?? scanResult.riskAssessment?.riskScore ?? 0;
+    const riskScoreNum = typeof riskScoreRaw === 'string' ? parseFloat(riskScoreRaw) : Number(riskScoreRaw);
+    const riskScore = Number.isFinite(riskScoreNum) ? riskScoreNum : 0;
+
     const riskLevel = scanResult.risk?.level || scanResult.riskAssessment?.riskLevel || 'None';
     const findings = scanResult.riskAssessment?.findingsBreakdown || scanResult.stats || {};
-    const scanTime = scanResult.metadata?.scan_time || (scanResult.performance?.scanTime ? `${scanResult.performance.scanTime.toFixed(2)}s` : 'N/A');
+
+    const perfScan = scanResult.performance?.scanTime;
+    const perfScanNum = typeof perfScan === 'string' ? parseFloat(perfScan) : Number(perfScan);
+    const scanTime = scanResult.metadata?.scan_time || (Number.isFinite(perfScanNum) ? `${perfScanNum.toFixed(2)}s` : 'N/A');
+
     const engineRaw = scanResult.metadata?.engine || scanResult.metadata?.scanner;
     const engine = typeof engineRaw === 'string' ? 
       (engineRaw.toLowerCase().includes('semgrep') ? 'Semgrep Scanner' : 

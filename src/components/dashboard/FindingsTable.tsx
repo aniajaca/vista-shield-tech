@@ -191,17 +191,18 @@ export default function FindingsTable({ findings, onFindingClick }: FindingsTabl
     return line ? `${file}:${line}` : file;
   };
 
+  // Ensure numeric scores to avoid runtime errors when formatting
+  const toNum = (val: any) => {
+    const n = typeof val === 'string' ? parseFloat(val) : Number(val);
+    return Number.isFinite(n) ? n : 0;
+  };
+
   const getAdjustedScore = (finding: Finding) =>
-    finding.adjustedScore || finding.cvss?.baseScore || 0;
+    toNum(finding.adjustedScore ?? finding.cvss?.baseScore ?? 0);
 
   const getCvssBaseScore = (finding: Finding) =>
-    finding.cvss?.baseScore || 0;
+    toNum(finding.cvss?.baseScore ?? 0);
 
-  const getCategory = (finding: Finding) => {
-    if (finding.cwe?.id) return `CWE-${finding.cwe.id}`;
-    if (finding.owasp?.category) return finding.owasp.category;
-    return 'N/A';
-  };
 
   const hasQuickFix = (finding: Finding) => {
     return Boolean(finding.remediation);
