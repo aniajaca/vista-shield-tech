@@ -3,11 +3,9 @@ import { ScanResult } from "@/entities/ScanResult";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import ScannerInterface from "../components/clean-scanner/ScannerInterface";
-import Header from "../components/dashboard/Header";
-import SummaryStrip from "../components/dashboard/SummaryStrip";
-import FindingsTable from "../components/dashboard/FindingsTable";
-import FindingDrawer from "../components/dashboard/FindingDrawer";
-import ExportModal from "../components/dashboard/ExportModal";
+import RiskOverviewCard from "../components/clean-scanner/RiskOverviewCard";
+import FindingsCard from "../components/clean-scanner/FindingsCard";
+import ExportSection from "../components/clean-scanner/ExportSection";
 import { RiskSettingsDrawer } from "@/components/RiskSettingsDrawer";
 import { useRiskSettings } from "@/hooks/useRiskSettings";
 import { AlertCircle, Settings } from "lucide-react";
@@ -79,11 +77,7 @@ export default function Dashboard() {
   const [scanResult, setScanResult] = useState(null);
   const [error, setError] = useState(null);
   const [progress, setProgress] = useState(0);
-  const [backendStatus, setBackendStatus] = useState<'online' | 'offline' | 'checking'>('checking');
-  const [activeTab, setActiveTab] = useState<'scanner' | 'dependencies'>('scanner');
-  const [selectedFinding, setSelectedFinding] = useState(null);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [backendStatus, setBackendStatus] = useState('checking');
   const {
     getRiskConfig,
     getRiskContext
@@ -190,161 +184,85 @@ export default function Dashboard() {
     } finally {
       clearInterval(progressInterval);
       setProgress(100);
-      // Remove the delay to prevent white screen
-      setIsLoading(false);
+      setTimeout(() => setIsLoading(false), 500);
     }
   };
   const hasResults = scanResult && !isLoading;
+  return <div className="text-[#374151]">
+            <style>{`
+                @import url('https://rsms.me/inter/inter.css');
+                html { font-family: 'Inter', sans-serif; }
+                .tabular-nums { font-variant-numeric: tabular-nums; }
+                .progress-bar {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 2px;
+                    z-index: 9999;
+                    background-color: transparent;
+                    transition: opacity 0.3s ease;
+                }
+                .progress-bar > div {
+                    background-color: #AFCB0E;
+                }
+            `}</style>
 
-  const handleFindingClick = (finding: any) => {
-    setSelectedFinding(finding);
-    setIsDrawerOpen(true);
-  };
+            {isLoading && <div className="progress-bar">
+                    <Progress value={progress} className="w-full h-full" />
+                </div>}
+            
+            <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-12 py-12">
+            
+                <div className="flex items-center justify-between mb-12">
+                    <div className="flex items-baseline gap-2">
+                        <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/fc56c3a44_image.png" alt="Neperia Logo" className="h-5 w-5 grayscale opacity-30" />
+                        <h1 className="text-lg font-semibold text-[#374151]">NEPERIA</h1>
+                        <span className="text-sm text-[#9CA3AF]">Code Scanner
+          </span>
+                            <div className={`ml-4 px-2 py-1 rounded-full text-xs font-medium ${backendStatus === 'online' ? 'bg-green-100 text-green-700' : backendStatus === 'offline' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                                {backendStatus === 'online' ? '● Backend Online' : backendStatus === 'offline' ? '● Backend Offline' : '● Checking...'}
+                            </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <RiskSettingsDrawer>
+                            <Button variant="outline" size="sm">
+                                <Settings className="w-4 h-4 mr-2" />
+                                Risk Settings
+                            </Button>
+                        </RiskSettingsDrawer>
+                        {hasResults && <Button onClick={() => setScanResult(null)} variant="ghost" className="text-sm font-medium text-[#6B7280] hover:text-[#AFCB0E] hover:bg-[#F9FAFB] transition-colors duration-150">
+                                Scan another file
+                            </Button>}
+                    </div>
+                </div>
 
-  const handleNewScan = () => {
-    setScanResult(null);
-    setError(null);
-  };
+                <main className="space-y-8">
+                    {!hasResults && <ScannerInterface onScan={handleScan} isLoading={isLoading} />}
 
-  const handleExport = () => {
-    setIsExportModalOpen(true);
-  };
+                    {error && <div className="bg-red-50 text-red-700 rounded-lg p-4 flex items-center gap-3">
+                            <AlertCircle className="w-5 h-5" />
+                            <p className="font-medium">{error}</p>
+                        </div>}
 
-  const handleOpenSettings = () => {
-    // The drawer manages its own state, we just need to trigger it
-    // This will be handled by the Header component clicking the actual trigger
-  };
+                    {hasResults && <div className="space-y-8">
+                            <RiskOverviewCard 
+                                riskAssessment={{
+                                    riskScore: scanResult.score?.final,
+                                    riskLevel: scanResult.risk?.level,
+                                    findingsBreakdown: scanResult.riskAssessment?.findingsBreakdown || scanResult.stats
+                                }} 
+                                performance={scanResult.performance} 
+                                metadata={scanResult.metadata} 
+                            />
+                            <FindingsCard findings={scanResult.findings || []} />
+                            <ExportSection findings={scanResult.findings || []} riskAssessment={scanResult.riskAssessment || {}} />
+                        </div>}
+                 </main>
 
-  // Extract data for summary strip
-  const getSummaryData = () => {
-    if (!scanResult) return null;
-    
-    const riskScoreRaw = scanResult.score?.final ?? scanResult.riskAssessment?.riskScore ?? 0;
-    const riskScoreNum = typeof riskScoreRaw === 'string' ? parseFloat(riskScoreRaw) : Number(riskScoreRaw);
-    const riskScore = Number.isFinite(riskScoreNum) ? riskScoreNum : 0;
-
-    const riskLevel = scanResult.risk?.level || scanResult.riskAssessment?.riskLevel || 'None';
-    const findings = scanResult.riskAssessment?.findingsBreakdown || scanResult.stats || {};
-
-    const perfScan = scanResult.performance?.scanTime;
-    const perfScanNum = typeof perfScan === 'string' ? parseFloat(perfScan) : Number(perfScan);
-    const scanTime = scanResult.metadata?.scan_time || (Number.isFinite(perfScanNum) ? `${perfScanNum.toFixed(2)}s` : 'N/A');
-
-    const engineRaw = scanResult.metadata?.engine || scanResult.metadata?.scanner;
-    const engine = typeof engineRaw === 'string' ? 
-      (engineRaw.toLowerCase().includes('semgrep') ? 'Semgrep Scanner' : 
-       engineRaw.toLowerCase().includes('ast') ? 'AST Scanner' : engineRaw) : 'N/A';
-    const rulesExecuted = scanResult.performance?.rulesExecuted || 'N/A';
-    const semgrepVersion = scanResult.metadata?.semgrepVersion;
-
-    return { riskScore, riskLevel, findings, scanTime, engine, rulesExecuted, semgrepVersion };
-  };
-
-  const summaryData = getSummaryData();
-
-  return (
-    <div className="min-h-screen bg-background">
-      <style>{`
-        .progress-bar {
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 3px;
-          z-index: 9999;
-          background-color: transparent;
-        }
-        .progress-bar > div {
-          background-color: hsl(var(--accent));
-        }
-      `}</style>
-
-      {isLoading && (
-        <div className="progress-bar">
-          <Progress value={progress} className="w-full h-full" />
-        </div>
-      )}
-
-      <Header
-        backendStatus={backendStatus}
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        hasResults={hasResults}
-        onNewScan={handleNewScan}
-        onExport={handleExport}
-        onOpenSettings={handleOpenSettings}
-      />
-
-      {summaryData && (
-        <SummaryStrip
-          riskScore={summaryData.riskScore}
-          riskLevel={summaryData.riskLevel}
-          findings={summaryData.findings}
-          scanTime={summaryData.scanTime}
-          engine={summaryData.engine}
-          rulesExecuted={summaryData.rulesExecuted}
-          semgrepVersion={summaryData.semgrepVersion}
-        />
-      )}
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {!hasResults && !isLoading && <ScannerInterface onScan={handleScan} isLoading={isLoading} />}
-        
-        {isLoading && !hasResults && (
-          <div className="text-center py-12">
-            <div className="text-lg font-medium text-foreground mb-2">Scanning in progress...</div>
-            <div className="text-sm text-muted-foreground">Analyzing your code for security vulnerabilities</div>
-          </div>
-        )}
-
-        {error && (
-          <div className="bg-destructive/10 text-destructive rounded-lg p-4 flex items-center gap-3 mb-8">
-            <AlertCircle className="w-5 h-5" />
-            <p className="font-medium">{error}</p>
-          </div>
-        )}
-
-        {hasResults && (
-          <FindingsTable 
-            findings={scanResult.findings || []} 
-            onFindingClick={handleFindingClick}
-          />
-        )}
-      </main>
-
-      {/* Side Drawer for Finding Details */}
-      <FindingDrawer
-        finding={selectedFinding}
-        isOpen={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
-      />
-
-      {/* Export Modal */}
-      <ExportModal
-        isOpen={isExportModalOpen}
-        onClose={() => setIsExportModalOpen(false)}
-        findings={scanResult?.findings || []}
-        riskAssessment={scanResult?.riskAssessment || {}}
-      />
-
-      {/* Risk Settings */}
-      <RiskSettingsDrawer>
-        <Button 
-          variant="outline" 
-          size="sm"
-          onClick={handleOpenSettings}
-          style={{ display: 'none' }} // Hidden since we'll trigger it programmatically
-        >
-          <Settings className="w-4 h-4 mr-2" />
-          Risk Settings
-        </Button>
-      </RiskSettingsDrawer>
-
-      <footer className="bg-white border-t border-border mt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-center">
-          <p className="text-sm text-muted-foreground">© 2025 Neperia. All rights reserved.</p>
-        </div>
-      </footer>
-    </div>
-  );
+                 <footer className="text-center mt-16">
+                   <p className="text-sm text-[#9CA3AF]">© 2025 Neperia. All rights reserved.</p>
+                 </footer>
+             </div>
+        </div>;
 }
