@@ -128,7 +128,7 @@ export default function ExportModal({
               <FileText className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
               <h3 className="font-semibold mb-2">Executive PDF</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                1-page summary with KPIs, risk score, and top 5 issues for management review.
+                <strong>Management summary</strong> with top 5 issues
               </p>
               <Button onClick={generateExecutivePDF} className="w-full">
                 <Download className="w-4 h-4 mr-2" />
@@ -142,7 +142,7 @@ export default function ExportModal({
               <Code className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
               <h3 className="font-semibold mb-2">Technical HTML</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Full findings with details and remediation steps for developers.
+                <strong>Full findings & remediation details</strong> for developers
               </p>
               <Button onClick={generateTechnicalHTML} className="w-full">
                 <Download className="w-4 h-4 mr-2" />
@@ -156,7 +156,7 @@ export default function ExportModal({
               <FileText className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
               <h3 className="font-semibold mb-2">JSON Data</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Raw structured data for automation and custom processing.
+                <strong>Raw structured data</strong> for automation
               </p>
               <Button onClick={generateJSON} className="w-full">
                 <Download className="w-4 h-4 mr-2" />

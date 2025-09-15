@@ -66,6 +66,95 @@ const SeverityChip = ({ severity }: { severity: string }) => {
   );
 };
 
+const PriorityBadge = ({ adjustedScore }: { adjustedScore: number }) => {
+  let priority = 'P4';
+  let className = 'bg-slate-100 text-slate-700';
+
+  if (adjustedScore >= 9) {
+    priority = 'P0';
+    className = 'bg-red-100 text-red-800 border-red-200';
+  } else if (adjustedScore >= 7) {
+    priority = 'P1';
+    className = 'bg-orange-100 text-orange-800 border-orange-200';
+  } else if (adjustedScore >= 5) {
+    priority = 'P2';
+    className = 'bg-yellow-100 text-yellow-800 border-yellow-200';
+  } else if (adjustedScore >= 3) {
+    priority = 'P3';
+    className = 'bg-blue-100 text-blue-800 border-blue-200';
+  }
+
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${className}`}>
+      {priority}
+    </span>
+  );
+};
+
+const CategoryChip = ({ finding }: { finding: Finding }) => {
+  // Map CWE/OWASP to common categories
+  const getCategoryFromFinding = (finding: Finding) => {
+    const cweId = finding.cwe?.id?.toString().replace('CWE-', '');
+    const owaspCategory = finding.owasp?.category?.toLowerCase();
+    
+    // Common XSS CWEs
+    if (['79', '80', '83', '85', '87'].includes(cweId)) return 'XSS';
+    // SQL Injection CWEs
+    if (['89', '564'].includes(cweId)) return 'SQLi';
+    // Command Injection
+    if (['77', '78', '88'].includes(cweId)) return 'Command Injection';
+    // Path Traversal
+    if (['22', '23', '36'].includes(cweId)) return 'Path Traversal';
+    // Insecure Deserialization
+    if (['502'].includes(cweId)) return 'Insecure Deserialization';
+    // Authentication issues
+    if (['287', '290', '293', '295'].includes(cweId)) return 'Auth Bypass';
+    // Authorization issues  
+    if (['285', '862', '863'].includes(cweId)) return 'Access Control';
+    // Crypto issues
+    if (['327', '328', '329', '330'].includes(cweId)) return 'Weak Crypto';
+    // CSRF
+    if (['352'].includes(cweId)) return 'CSRF';
+    
+    // OWASP mappings
+    if (owaspCategory?.includes('injection')) return 'Injection';
+    if (owaspCategory?.includes('xss')) return 'XSS';
+    if (owaspCategory?.includes('auth')) return 'Auth Issue';
+    if (owaspCategory?.includes('access')) return 'Access Control';
+    if (owaspCategory?.includes('crypto')) return 'Weak Crypto';
+    
+    // Fallback to CWE or general category
+    if (finding.cwe?.id) return `CWE-${cweId}`;
+    return 'Security Issue';
+  };
+
+  const category = getCategoryFromFinding(finding);
+  
+  // Color coding for categories
+  const getCategoryColor = (category: string) => {
+    const colorMap: Record<string, string> = {
+      'XSS': 'bg-red-100 text-red-700 border-red-200',
+      'SQLi': 'bg-purple-100 text-purple-700 border-purple-200', 
+      'Command Injection': 'bg-orange-100 text-orange-700 border-orange-200',
+      'Path Traversal': 'bg-yellow-100 text-yellow-700 border-yellow-200',
+      'Insecure Deserialization': 'bg-pink-100 text-pink-700 border-pink-200',
+      'Auth Bypass': 'bg-indigo-100 text-indigo-700 border-indigo-200',
+      'Access Control': 'bg-blue-100 text-blue-700 border-blue-200',
+      'Weak Crypto': 'bg-emerald-100 text-emerald-700 border-emerald-200',
+      'CSRF': 'bg-rose-100 text-rose-700 border-rose-200',
+      'Injection': 'bg-violet-100 text-violet-700 border-violet-200'
+    };
+    
+    return colorMap[category] || 'bg-slate-100 text-slate-700 border-slate-200';
+  };
+
+  return (
+    <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium border ${getCategoryColor(category)}`}>
+      {category}
+    </span>
+  );
+};
+
 const toText = (val: any): string => {
   if (val == null) return '';
   const t = typeof val;
@@ -163,6 +252,8 @@ ${finding.owasp?.category ? `OWASP: ${finding.owasp.category}` : ''}`;
               <SheetTitle className="text-lg leading-6 mb-2">{title}</SheetTitle>
               <div className="flex items-center gap-2 mb-3">
                 <SeverityChip severity={finding.severity} />
+                <PriorityBadge adjustedScore={adjustedScore} />
+                <CategoryChip finding={finding} />
                 <Badge variant="outline" className="tabular-nums">
                   Score: {adjustedScore.toFixed(1)}
                 </Badge>
@@ -184,6 +275,9 @@ ${finding.owasp?.category ? `OWASP: ${finding.owasp.category}` : ''}`;
             </h3>
             <p className="text-sm text-muted-foreground leading-relaxed">
               {description}
+            </p>
+            <p className="text-xs text-muted-foreground/80 italic mt-2">
+              Even medium findings can reveal systemic issues.
             </p>
             {finding.businessImpact && (
               <p className="text-sm text-muted-foreground leading-relaxed mt-2">
