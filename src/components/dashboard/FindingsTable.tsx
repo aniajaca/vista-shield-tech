@@ -203,6 +203,11 @@ export default function FindingsTable({ findings, onFindingClick }: FindingsTabl
   const getCvssBaseScore = (finding: Finding) =>
     toNum(finding.cvss?.baseScore ?? 0);
 
+  const getCategory = (finding: Finding) => {
+    if (finding.cwe?.id) return `CWE-${finding.cwe.id}`;
+    if (finding.owasp?.category) return finding.owasp.category;
+    return 'N/A';
+  };
 
   const hasQuickFix = (finding: Finding) => {
     return Boolean(finding.remediation);
