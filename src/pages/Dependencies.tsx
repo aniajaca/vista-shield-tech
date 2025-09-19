@@ -230,8 +230,7 @@ export default function Dependencies() {
                                 performance={{
                                     scanTime: scanResult.scan_time,
                                     packagesScanned: scanResult.packages_scanned,
-                                    dataSources: scanResult.data_sources,
-                                    rulesExecuted: scanResult.rules_applied
+                                    dataSources: scanResult.data_sources
                                 }}
                             />
                             <DependenciesFindingsCard

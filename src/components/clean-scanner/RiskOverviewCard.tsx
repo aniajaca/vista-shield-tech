@@ -8,7 +8,6 @@ interface RiskAssessment {
 
 interface Performance {
     scanTime?: number;
-    rulesExecuted?: number;
 }
 
 interface RiskOverviewCardProps {
@@ -60,12 +59,12 @@ export default function RiskOverviewCard({ riskAssessment = {}, metadata, perfor
     
     const totalVulns = Object.values(findingsBreakdown).reduce((a, b) => (typeof b === 'number' ? a + b : a), 0);
     
-    const { scanTime, rulesExecuted } = performance;
+    const { scanTime } = performance;
     
     // Normalize engine and scan time from metadata
     const engineRaw = metadata?.engine || metadata?.scanner || metadata?.tool;
     const engineStr = typeof engineRaw === 'string' ? engineRaw.toLowerCase() : (engineRaw?.name?.toLowerCase?.());
-    const engineDisplay = engineStr?.includes('semgrep') ? 'Semgrep (~80 rules)' : engineStr?.includes('ast') ? 'AST Scanner' : (engineRaw || 'Semgrep (~80 rules)');
+    const engineDisplay = engineStr?.includes('semgrep') ? 'Semgrep' : engineStr?.includes('ast') ? 'AST Scanner' : (engineRaw || 'Semgrep');
     const scanTimeDisplay = metadata?.scan_time || (typeof scanTime === 'number' ? `${scanTime.toFixed(2)}s` : 'N/A');
     
     return (
@@ -97,10 +96,6 @@ export default function RiskOverviewCard({ riskAssessment = {}, metadata, perfor
                     <Metric 
                         label="Engine Used" 
                         value={engineDisplay}
-                    />
-                    <Metric 
-                        label="Rules Applied" 
-                        value={rulesExecuted || 'N/A'}
                     />
                 </div>
             </div>

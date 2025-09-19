@@ -161,10 +161,6 @@ export const ResultsView = ({ onScanAnother }: ResultsViewProps) => {
                   <span className="text-sm text-gray-500">Scan Time</span>
                   <span className="text-sm text-gray-900">N/A</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-500">Rules Applied</span>
-                  <span className="text-sm text-gray-900">N/A</span>
-                </div>
               </div>
             </div>
 

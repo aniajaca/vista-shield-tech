@@ -10,7 +10,6 @@ interface Performance {
     scanTime?: number;
     packagesScanned?: number;
     dataSources?: string[];
-    rulesExecuted?: number;
 }
 
 interface DependenciesRiskOverviewCardProps {
@@ -55,7 +54,7 @@ export default function DependenciesRiskOverviewCard({ riskAssessment = {}, perf
     const { riskScore, riskLevel, findingsBreakdown = {} } = riskAssessment;
     const totalVulns = Object.values(findingsBreakdown).reduce((a, b) => (typeof b === 'number' ? a + b : a), 0);
     
-    const { scanTime, packagesScanned, dataSources = [], rulesExecuted } = performance;
+    const { scanTime, packagesScanned, dataSources = [] } = performance;
     
     return (
         <div className="bg-white p-6 rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
@@ -90,10 +89,6 @@ export default function DependenciesRiskOverviewCard({ riskAssessment = {}, perf
                     <Metric 
                         label="Data Sources" 
                         value={dataSources.length > 0 ? dataSources.join(', ') : 'N/A'}
-                    />
-                    <Metric 
-                        label="Rules Applied" 
-                        value={rulesExecuted || 'N/A'}
                     />
                 </div>
             </div>

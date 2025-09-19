@@ -8,7 +8,7 @@ interface RiskAssessment {
 interface ExportSectionProps {
     findings?: any[];
     riskAssessment?: RiskAssessment;
-    performance?: { scanTime?: number; rulesExecuted?: number };
+    performance?: { scanTime?: number };
     metadata?: any;
 }
 
