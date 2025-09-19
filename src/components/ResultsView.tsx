@@ -65,7 +65,9 @@ export const ResultsView = ({ onScanAnother }: ResultsViewProps) => {
       title: 'OS Command Injection',
       severity: 'critical',
       file: 'code.js',
-      line: 21
+      line: 21,
+      description: 'User input is passed directly to shell commands without proper validation or sanitization.',
+      recommendation: 'Use parameterized commands or shell escape functions. Avoid direct shell execution with user input. Implement input validation and use safe system call alternatives like execve() with proper argument arrays.'
     },
     {
       id: 'vuln-006',
@@ -236,8 +238,8 @@ export const ResultsView = ({ onScanAnother }: ResultsViewProps) => {
                           <div>
                             <div className="font-medium text-gray-900 mb-1">CVSS SCORE</div>
                             <div className="text-sm text-gray-600">
-                              <div>Base: {vuln.cvssBase}</div>
-                              <div>Adjusted: {vuln.cvssAdjusted}</div>
+                              <div>Base CVSS: {vuln.cvssBase}</div>
+                              <div>Base CVSS: {vuln.cvssAdjusted}</div>
                             </div>
                           </div>
 

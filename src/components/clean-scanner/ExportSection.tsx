@@ -101,7 +101,7 @@ export default function ExportSection({ findings = [], riskAssessment = {}, perf
                     ` : ''}
 
                     <h4 style="font-size: 12px; color: #6B7280; margin-top: 16px; font-weight: 500;">Remediation</h4>
-                    <p>${remediation?.strategy || remediation || 'Review and apply security best practices.'}</p>
+                    <p>${remediation?.strategy || remediation || (title?.toLowerCase().includes('command injection') || title?.toLowerCase().includes('os command') ? 'Use parameterized commands or shell escape functions. Avoid direct shell execution with user input. Implement input validation and use safe system call alternatives like execve() with proper argument arrays.' : 'Review and apply security best practices.')}</p>
                     
                     <div style="border-top: 1px solid #E5E7EB; margin-top: 24px; padding-top: 16px; display: flex; gap: 32px; font-size: 14px;">
                         ${cweDisplayId !== 'N/A' ? `<div><strong>CWE:</strong> ${cweDisplayId} - ${cwe.name}</div>` : ''}
@@ -155,7 +155,7 @@ export default function ExportSection({ findings = [], riskAssessment = {}, perf
                     ` : ''}
 
                     <h4 style="font-size: 12px; color: #6B7280; margin-top: 16px; font-weight: 500;">Remediation</h4>
-                    <p>${remediation?.strategy || remediation || 'Review and apply security best practices.'}</p>
+                    <p>${remediation?.strategy || remediation || (title?.toLowerCase().includes('command injection') || title?.toLowerCase().includes('os command') ? 'Use parameterized commands or shell escape functions. Avoid direct shell execution with user input. Implement input validation and use safe system call alternatives like execve() with proper argument arrays.' : 'Review and apply security best practices.')}</p>
                     
                     <div style="border-top: 1px solid #E5E7EB; margin-top: 24px; padding-top: 16px; display: flex; gap: 32px; font-size: 14px; flex-wrap: wrap;">
                         ${cweDisplayId !== 'N/A' ? `<div><strong>CWE:</strong> ${cweDisplayId}${cwe?.name ? ` - ${cwe.name}` : ''}</div>` : ''}

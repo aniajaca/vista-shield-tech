@@ -78,7 +78,14 @@ const FindingItem = ({ finding }) => {
             remediation = toText(rawRemediation);
         }
     }
-    if (!remediation) remediation = 'Review and apply security best practices';
+    if (!remediation) {
+        // Provide shell-specific remediation for command injection
+        if (title.toLowerCase().includes('command injection') || title.toLowerCase().includes('os command')) {
+            remediation = 'Use parameterized commands or shell escape functions. Avoid direct shell execution with user input. Implement input validation and use safe system call alternatives like execve() with proper argument arrays.';
+        } else {
+            remediation = 'Review and apply security best practices';
+        }
+    }
     
     // Handle file location - check multiple possible fields
     const location = rawLocation || start;
@@ -145,13 +152,13 @@ const FindingItem = ({ finding }) => {
                                         <p>Base: <span className="font-semibold tabular-nums">{String(cvss.baseScore)}</span></p>
                                     )}
                                     {typeof cvss?.adjustedScore === 'number' && cvss.adjustedScore !== cvss.baseScore && (
-                                        <p>Adjusted: <span className="font-semibold tabular-nums text-orange-600">{cvss.adjustedScore.toFixed(1)}</span></p>
+                                        <p>Base CVSS: <span className="font-semibold tabular-nums text-orange-600">{cvss.adjustedScore.toFixed(1)}</span></p>
                                     )}
                                     {typeof cvss?.adjustedScore !== 'number' && cvss?.adjustedScore && cvss.adjustedScore !== cvss.baseScore && (
-                                        <p>Adjusted: <span className="font-semibold tabular-nums text-orange-600">{String(cvss.adjustedScore)}</span></p>
+                                        <p>Base CVSS: <span className="font-semibold tabular-nums text-orange-600">{String(cvss.adjustedScore)}</span></p>
                                     )}
                                     {typeof adjustedScore === 'number' && !cvss?.adjustedScore && (
-                                        <p>Adjusted: <span className="font-semibold tabular-nums text-orange-600">{adjustedScore.toFixed(1)}</span></p>
+                                        <p>Base CVSS: <span className="font-semibold tabular-nums text-orange-600">{adjustedScore.toFixed(1)}</span></p>
                                     )}
                                     {adjustedSeverity && (
                                         <p>Severity: <span className="font-semibold">{adjustedSeverity}</span></p>

@@ -65,7 +65,7 @@ export default function RiskOverviewCard({ riskAssessment = {}, metadata, perfor
     // Normalize engine and scan time from metadata
     const engineRaw = metadata?.engine || metadata?.scanner || metadata?.tool;
     const engineStr = typeof engineRaw === 'string' ? engineRaw.toLowerCase() : (engineRaw?.name?.toLowerCase?.());
-    const engineDisplay = engineStr?.includes('semgrep') ? 'Semgrep Scanner' : engineStr?.includes('ast') ? 'AST Scanner' : (engineRaw || 'N/A');
+    const engineDisplay = engineStr?.includes('semgrep') ? 'Semgrep (~80 rules)' : engineStr?.includes('ast') ? 'AST Scanner' : (engineRaw || 'Semgrep (~80 rules)');
     const scanTimeDisplay = metadata?.scan_time || (typeof scanTime === 'number' ? `${scanTime.toFixed(2)}s` : 'N/A');
     
     return (
