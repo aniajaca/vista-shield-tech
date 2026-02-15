@@ -1,5 +1,5 @@
 // lib/api.js - Neperia backend integration
-const API_URL = 'https://semgrep-backend-production.up.railway.app';
+const API_URL = import.meta.env.VITE_API_URL || 'https://semgrep-backend-production.up.railway.app';
 
 async function handleResponse(response) {
   if (response.ok) return response.json();
