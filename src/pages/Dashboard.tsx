@@ -173,7 +173,12 @@ export default function Dashboard() {
                                 metadata={scanResult.metadata} 
                             />
                             <FindingsCard findings={scanResult.findings || []} />
-                            <ExportSection findings={scanResult.findings || []} riskAssessment={scanResult.riskAssessment || {}} />
+                            <ExportSection 
+                                findings={scanResult.findings || []} 
+                                riskAssessment={scanResult.riskAssessment || {}} 
+                                performance={scanResult.performance}
+                                metadata={scanResult.metadata}
+                            />
                         </div>}
                  </main>
 
