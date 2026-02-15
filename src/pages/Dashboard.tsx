@@ -133,7 +133,7 @@ export default function Dashboard() {
             
                 <div className="flex items-center justify-between mb-12">
                     <div className="flex items-baseline gap-2">
-                        <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/fc56c3a44_image.png" alt="Neperia Logo" className="h-5 w-5 grayscale opacity-30" />
+                        <img src="/neperia-logo.png" alt="Neperia Logo" className="h-5 w-5 grayscale opacity-30" />
                         <h1 className="text-lg font-semibold text-[#374151]">NEPERIA</h1>
                         <span className="text-sm text-[#9CA3AF]">Code Scanner
           </span>
