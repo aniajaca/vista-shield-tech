@@ -204,8 +204,8 @@ export default function ExportSection({ findings = [], riskAssessment = {}, perf
       <h3 className="text-sm font-medium uppercase tracking-wider text-[#6B7280] mb-4">Export Report</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
             <button onClick={() => downloadReport('pdf')} className="w-full text-left p-4 rounded-xl transition-all duration-150 bg-white hover:bg-[#F9FAFB] shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
-                <h4 className="font-semibold text-[#374151]">Executive PDF</h4>
-                <p className="text-xs text-[#9CA3AF]">High-level summary for management.</p>
+                <h4 className="font-semibold text-[#374151]">Executive Report</h4>
+                <p className="text-xs text-[#9CA3AF]">High-level summary for management (HTML format).</p>
             </button>
             <button onClick={() => downloadReport('html')} className="w-full text-left p-4 rounded-xl transition-all duration-150 bg-white hover:bg-[#F9FAFB] shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
                 <h4 className="font-semibold text-[#374151]">Technical HTML</h4>
