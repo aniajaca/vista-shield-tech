@@ -117,8 +117,15 @@ export default function ExportSection({ findings = [], riskAssessment = {}, perf
           riskAssessment,
           findings,
           metadata: {
-            exportDate: new Date().toISOString()
-          }
+            exportDate: new Date().toISOString(),
+            totalFindings: findings.length,
+            severityBreakdown: {
+              critical: sevCount('Critical'),
+              high: sevCount('High'),
+              medium: sevCount('Medium'),
+              low: sevCount('Low'),
+            },
+          },
         };
         const blob = new Blob([JSON.stringify(jsonReport, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
