@@ -58,7 +58,11 @@ const FindingItem = ({ finding }) => {
         location: rawLocation, start,
         code, extractedCode, codeSnippet, snippet, extra,
         file, startLine, line,
-        adjustedScore, adjustedSeverity
+        adjustedScore, adjustedSeverity,
+        // NEW: backend-specific fields
+        bts, crs, priority: findingPriority, sla,
+        context, contextEvidence, inferredFactors, appliedFactors,
+        confidence, impact, likelihood, ruleId
     } = finding;
 
     const title = toText(rawTitle || name || check_id || message) || "Security Vulnerability";
@@ -92,6 +96,7 @@ const FindingItem = ({ finding }) => {
     const filePath = location?.path || location?.file || file || finding.file || "Code scan";
     const lineNumber = location?.line || location?.row || startLine || line || finding.startLine;
     const locationStr = lineNumber ? `${filePath}:${lineNumber}` : filePath;
+    const ruleIdShort = ruleId ? ruleId.split('.').slice(-2).join('.') : '';
 
     // Handle vulnerable code - check multiple possible fields including snippet
     const vulnerableCode = toText(snippet || code || extractedCode || codeSnippet || extra?.lines) || '';
@@ -119,6 +124,9 @@ const FindingItem = ({ finding }) => {
                              <MapPin className="w-4 h-4" strokeWidth={1.5} />
                              <span className="font-mono text-xs">{locationStr}</span>
                         </div>
+                        {ruleIdShort && (
+                            <span className="font-mono text-xs text-[#9CA3AF] hidden lg:inline">{ruleIdShort}</span>
+                        )}
                         <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} strokeWidth={1.5} />
                     </div>
                 </div>
@@ -175,6 +183,48 @@ const FindingItem = ({ finding }) => {
                                             <div key={factor} className="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded">
                                                 {factor}: {typeof value === 'number' ? (value > 1 ? `×${value.toFixed(1)}` : `+${value.toFixed(1)}`) : String(value)}
                                             </div>
+                                        ))}
+                                    </div>
+                                </InfoBlock>
+                            )}
+
+                            {/* Neperia Risk Scores */}
+                            {(bts || crs) && (
+                                <InfoBlock title="Risk Assessment">
+                                    {typeof bts === 'number' && (
+                                        <p>BTS: <span className="font-semibold tabular-nums">{bts.toFixed(1)}</span></p>
+                                    )}
+                                    {typeof crs === 'number' && (
+                                        <p>CRS: <span className="font-semibold tabular-nums">{crs}</span></p>
+                                    )}
+                                    {findingPriority?.priority && (
+                                        <div className="mt-1">
+                                            <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
+                                                findingPriority.priority === 'P0' ? 'bg-red-100 text-red-700' :
+                                                findingPriority.priority === 'P1' ? 'bg-orange-100 text-orange-700' :
+                                                'bg-yellow-100 text-yellow-700'
+                                            }`}>
+                                                {findingPriority.priority} — {findingPriority.action}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {sla && <p className="text-xs text-[#6B7280] mt-1">SLA: {sla} days</p>}
+                                </InfoBlock>
+                            )}
+
+                            {/* Context Inference */}
+                            {inferredFactors && inferredFactors.length > 0 && (
+                                <InfoBlock title="Context Detected">
+                                    <div className="flex flex-wrap gap-1">
+                                        {inferredFactors.map((factor) => (
+                                            <span key={factor} className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
+                                                appliedFactors?.includes(factor)
+                                                    ? 'bg-orange-100 text-orange-800'
+                                                    : 'bg-gray-100 text-gray-600'
+                                            }`}>
+                                                {factor.replace(/([A-Z])/g, ' $1').trim()}
+                                                {appliedFactors?.includes(factor) ? ' ✓' : ''}
+                                            </span>
                                         ))}
                                     </div>
                                 </InfoBlock>
