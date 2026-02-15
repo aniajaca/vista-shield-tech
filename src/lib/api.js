@@ -23,8 +23,6 @@ async function postJson(path, payload) {
 
 export async function scanCode(code, language = 'javascript', riskConfig = null, context = null, filename = null) {
   const ruleset = (language && language.toLowerCase().startsWith('js')) ? 'p/javascript' : 'auto';
-  console.log('🔧 scanCode called with:', { language, filename, ruleset });
-  
   const payload = {
     code,
     language,
@@ -36,26 +34,15 @@ export async function scanCode(code, language = 'javascript', riskConfig = null,
   if (riskConfig) payload.riskConfig = riskConfig;
   if (context) payload.context = context;
 
-  console.log('📤 Sending payload to /scan-code:', JSON.stringify(payload, null, 2));
-
   // Try /scan-code first, then fallback to /scan if it fails
   // Try /scan-code; only fallback to /scan when endpoint is missing
   const resp = await postJson('/scan-code', payload);
   if (resp.ok) {
-    const result = await resp.json();
-    console.log('✅ /scan-code success, metadata:', result.metadata);
-    return result;
+    return await resp.json();
   }
   
   // If we get a 500 error (likely taxonomy processing issue), retry with raw results
   if (resp.status === 500) {
-    console.warn('Server error detected, retrying with raw results...');
-    try {
-      const errorBody = await resp.text();
-      console.warn('Original error:', errorBody);
-    } catch (e) {
-      console.warn('Could not parse error body');
-    }
     
     const rawPayload = { ...payload, rawResults: true, skipTaxonomy: true };
     const rawResp = await postJson('/scan-code', rawPayload);
