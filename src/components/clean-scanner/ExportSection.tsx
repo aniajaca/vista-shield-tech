@@ -12,13 +12,73 @@ interface ExportSectionProps {
     metadata?: any;
 }
 
+function getCweInfo(cwe: any) {
+  const id = typeof cwe === 'string' ? cwe : cwe?.id || 'N/A';
+  const name = typeof cwe === 'object' ? cwe?.name || '' : '';
+  return { id, name };
+}
+
+function getOwaspDisplay(owasp: any): string {
+  if (Array.isArray(owasp) && owasp.length > 0) return owasp[0];
+  if (owasp?.category) return owasp.category;
+  return '';
+}
+
+function getRemediationText(remediation: any): string {
+  if (typeof remediation === 'object') {
+    return remediation.description || remediation.approach || 'Review and apply security best practices';
+  }
+  return remediation || 'Review and apply security best practices.';
+}
+
+function escapeHtml(str: string): string {
+  return str.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function renderFindingHtml(finding: any, index: number): string {
+  const { severity = 'Medium', title, message, description, cwe, owasp, cvss, location, code, snippet, remediation } = finding;
+  const { file, line } = location || {};
+  const vulnCode = code || snippet || '';
+  const { id: cweId, name: cweName } = getCweInfo(cwe);
+  const owaspText = getOwaspDisplay(owasp);
+  const remText = getRemediationText(remediation);
+
+  let html = '<div class="finding">';
+  html += '<div style="display:flex; justify-content:space-between; align-items:flex-start;">';
+  html += '<h3>' + (index + 1) + '. ' + (title || message) + '</h3>';
+  html += '<span class="pill pill-' + severity.toLowerCase() + '">' + severity + '</span>';
+  html += '</div>';
+  html += '<div style="font-size: 12px; color: #6B7280; font-family: \'Monaco\', monospace; margin-top: 4px;">' + (file || 'N/A') + ':' + (line || 'N/A') + '</div>';
+  html += '<p style="margin-top: 16px;">' + (description || message) + '</p>';
+
+  if (vulnCode) {
+    html += '<h4 style="font-size: 12px; color: #6B7280; margin-top: 16px; font-weight: 500;">Vulnerable Code</h4>';
+    html += '<div class="code">' + escapeHtml(vulnCode) + '</div>';
+  }
+
+  html += '<h4 style="font-size: 12px; color: #6B7280; margin-top: 16px; font-weight: 500;">Remediation</h4>';
+  html += '<p>' + remText + '</p>';
+
+  html += '<div style="border-top: 1px solid #E5E7EB; margin-top: 24px; padding-top: 16px; display: flex; gap: 32px; font-size: 14px; flex-wrap: wrap;">';
+  if (cweId !== 'N/A') {
+    html += '<div><strong>CWE:</strong> ' + cweId + (cweName ? ' - ' + cweName : '') + '</div>';
+  }
+  if (owaspText) {
+    html += '<div><strong>OWASP:</strong> ' + owaspText + '</div>';
+  }
+  if (cvss?.baseScore) {
+    html += '<div><strong>CVSS:</strong> ' + cvss.baseScore.toFixed(1) + '</div>';
+  }
+  html += '</div></div>';
+  return html;
+}
+
 export default function ExportSection({ findings = [], riskAssessment = {}, performance = {}, metadata = {} }: ExportSectionProps) {
   const { riskScore = 0, riskLevel = 'N/A' } = riskAssessment;
 
   const downloadReport = (format) => {
     const timestamp = new Date().toLocaleDateString();
     
-    // FIX: Re-style HTML and PDF exports to match minimal UI
     const minimalStyles = `
         body { font-family: 'Inter', sans-serif; line-height: 1.6; color: #374151; background-color: #FFFFFF; max-width: 1200px; margin: 0 auto; padding: 48px; }
         h1, h2, h3 { color: #374151; font-weight: 600; }
@@ -39,7 +99,6 @@ export default function ExportSection({ findings = [], riskAssessment = {}, perf
         .meta-value { font-size: 18px; font-weight: 600; }
     `;
     
-    // Helpers
     const normalizeSeverity = (sev: any) => {
       if (!sev) return 'Low';
       const s = String(sev).toLowerCase();
@@ -47,15 +106,11 @@ export default function ExportSection({ findings = [], riskAssessment = {}, perf
       if (['high', 'major'].includes(s)) return 'High';
       if (['medium', 'moderate', 'warn', 'warning'].includes(s)) return 'Medium';
       if (['low', 'minor', 'info', 'informational'].includes(s)) return 'Low';
-      // Fallback: capitalize first letter
       return s ? s.charAt(0).toUpperCase() + s.slice(1) : 'Low';
     };
 
     const sevCount = (level: 'Critical' | 'High' | 'Medium' | 'Low') =>
       findings.filter((f) => normalizeSeverity(f?.severity) === level).length;
-
-    const escapeHTML = (str: any) =>
-      typeof str === 'string' ? str.replace(/</g, '&lt;').replace(/>/g, '&gt;') : str;
 
     if (format === 'json') {
         const jsonReport = {
@@ -74,46 +129,11 @@ export default function ExportSection({ findings = [], riskAssessment = {}, perf
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-    } else if (format === 'html' || format === 'pdf') { // Combine for styling
-      let reportContent;
+    } else if (format === 'html' || format === 'pdf') {
+      let reportContent: string;
       if (format === 'html') {
-          // TECHNICAL HTML REPORT
-          reportContent = `
-            <h2>Detailed Security Findings</h2>
-            ${findings.map((finding, index) => {
-              const { severity = 'Medium', title, message, description, cwe, owasp, cvss, location, code, remediation } = finding;
-              const { file, line } = location || {};
-              // FIX: CWE-CWE- issue
-              const cweDisplayId = cwe?.id ? (String(cwe.id).startsWith('CWE-') ? cwe.id : `CWE-${cwe.id}`) : 'N/A';
-              
-              return `
-                <div class="finding">
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                        <h3>${index + 1}. ${title || message}</h3>
-                        <span class="pill pill-${severity.toLowerCase()}">${severity}</span>
-                    </div>
-                    <div style="font-size: 12px; color: #6B7280; font-family: 'Monaco', monospace; margin-top: 4px;">${file || 'N/A'}:${line || 'N/A'}</div>
-                    <p style="margin-top: 16px;">${description || message}</p>
-                    
-                    ${code ? `
-                    <h4 style="font-size: 12px; color: #6B7280; margin-top: 16px; font-weight: 500;">Vulnerable Code</h4>
-                    <div class="code">${code.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
-                    ` : ''}
-
-                    <h4 style="font-size: 12px; color: #6B7280; margin-top: 16px; font-weight: 500;">Remediation</h4>
-                    <p>${remediation?.strategy || remediation || (title?.toLowerCase().includes('command injection') || title?.toLowerCase().includes('os command') ? 'Use parameterized commands or shell escape functions. Avoid direct shell execution with user input. Implement input validation and use safe system call alternatives like execve() with proper argument arrays.' : 'Review and apply security best practices.')}</p>
-                    
-                    <div style="border-top: 1px solid #E5E7EB; margin-top: 24px; padding-top: 16px; display: flex; gap: 32px; font-size: 14px;">
-                        ${cweDisplayId !== 'N/A' ? `<div><strong>CWE:</strong> ${cweDisplayId} - ${cwe.name}</div>` : ''}
-                        ${owasp ? `<div><strong>OWASP:</strong> ${owasp.category}</div>` : ''}
-                        ${cvss?.baseScore ? `<div><strong>CVSS:</strong> ${cvss.baseScore.toFixed(1)}</div>` : ''}
-                    </div>
-                </div>
-              `;
-            }).join('')}
-          `;
+          reportContent = `<h2>Detailed Security Findings</h2>` + findings.map((f, i) => renderFindingHtml(f, i)).join('');
       } else {
-          // COMPREHENSIVE PDF REPORT WITH ALL SCAN INFORMATION
           reportContent = `
             <h2>Executive Summary</h2>
             <div class="meta">
@@ -133,39 +153,7 @@ export default function ExportSection({ findings = [], riskAssessment = {}, perf
                 <div class="meta-item"><span class="meta-label">Low</span><span class="meta-value">${sevCount('Low')}</span></div>
             </div>
             
-            <h2>Detailed Security Findings</h2>
-            ${findings.map((finding, index) => {
-              const { severity = 'Medium', title, message, description, cwe, owasp, cvss, location, code, extractedCode, codeSnippet: cs, extra, remediation } = finding;
-              const vulnCode = code || extractedCode || cs || (extra && extra.lines);
-              const { file, line } = location || {};
-              const cweDisplayId = cwe?.id ? (String(cwe.id).startsWith('CWE-') ? cwe.id : `CWE-${cwe.id}`) : 'N/A';
-              
-              return `
-                <div class="finding">
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                        <h3>${index + 1}. ${title || message}</h3>
-                        <span class="pill pill-${severity.toLowerCase()}">${severity}</span>
-                    </div>
-                    <div style="font-size: 12px; color: #6B7280; font-family: 'Monaco', monospace; margin-top: 4px;">${file || 'N/A'}:${line || 'N/A'}</div>
-                    <p style="margin-top: 16px;">${description || message}</p>
-                    
-                    ${code ? `
-                    <h4 style="font-size: 12px; color: #6B7280; margin-top: 16px; font-weight: 500;">Vulnerable Code</h4>
-                    <div class="code">${code.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
-                    ` : ''}
-
-                    <h4 style="font-size: 12px; color: #6B7280; margin-top: 16px; font-weight: 500;">Remediation</h4>
-                    <p>${remediation?.strategy || remediation || (title?.toLowerCase().includes('command injection') || title?.toLowerCase().includes('os command') ? 'Use parameterized commands or shell escape functions. Avoid direct shell execution with user input. Implement input validation and use safe system call alternatives like execve() with proper argument arrays.' : 'Review and apply security best practices.')}</p>
-                    
-                    <div style="border-top: 1px solid #E5E7EB; margin-top: 24px; padding-top: 16px; display: flex; gap: 32px; font-size: 14px; flex-wrap: wrap;">
-                        ${cweDisplayId !== 'N/A' ? `<div><strong>CWE:</strong> ${cweDisplayId}${cwe?.name ? ` - ${cwe.name}` : ''}</div>` : ''}
-                        ${owasp ? `<div><strong>OWASP:</strong> ${owasp.category}</div>` : ''}
-                        ${cvss?.baseScore ? `<div><strong>CVSS:</strong> ${cvss.baseScore.toFixed(1)}</div>` : ''}
-                    </div>
-                </div>
-              `;
-            }).join('')}
-          `;
+            <h2>Detailed Security Findings</h2>` + findings.map((f, i) => renderFindingHtml(f, i)).join('');
       }
       
       const fullHtml = `<!DOCTYPE html>
