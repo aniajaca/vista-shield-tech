@@ -101,7 +101,12 @@ const FindingItem = ({ finding }) => {
     // Handle vulnerable code - check multiple possible fields including snippet
     const vulnerableCode = toText(snippet || code || extractedCode || codeSnippet || extra?.lines) || '';
 
-    const cweDisplayId = cwe?.id ? (String(cwe.id).startsWith('CWE-') ? cwe.id : `CWE-${cwe.id}`) : null;
+    const cweDisplayId = typeof cwe === 'string'
+        ? (cwe.startsWith('CWE-') ? cwe : `CWE-${cwe}`)
+        : cwe?.id
+            ? (String(cwe.id).startsWith('CWE-') ? cwe.id : `CWE-${cwe.id}`)
+            : null;
+    const cweName = typeof cwe === 'object' ? cwe?.name : null;
 
     return (
         <div className={`bg-white rounded-xl transition-all duration-150 ${isOpen ? 'shadow-[0_4px_12px_rgba(0,0,0,0.08)]' : 'shadow-[0_1px_3px_rgba(0,0,0,0.05)]'}`}>
@@ -137,7 +142,7 @@ const FindingItem = ({ finding }) => {
                         <div className="md:col-span-1 space-y-6">
                             {cweDisplayId && (
                                 <InfoBlock title="CWE">
-                                    <p><span className="font-semibold">{cweDisplayId}</span>: {cwe.name}</p>
+                                    <p><span className="font-semibold">{cweDisplayId}</span>{cweName ? `: ${cweName}` : ''}</p>
                                 </InfoBlock>
                             )}
                             {owasp && (
