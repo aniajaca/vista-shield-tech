@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ScanResult } from "@/entities/ScanResult";
+
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import ScannerInterface from "../components/clean-scanner/ScannerInterface";
@@ -168,13 +168,6 @@ export default function Dashboard() {
           });
         }
         setScanResult(response.data);
-
-        // Save to database
-        await ScanResult.create({
-          ...response.data,
-          fileName: options.file.name
-        });
-        console.log('💾 Scan result saved to database');
       } else {
         throw new Error(response.error);
       }
