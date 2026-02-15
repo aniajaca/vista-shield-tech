@@ -12,9 +12,6 @@ import { scanDependencies, testConnection, getHealthStatus } from "@/lib/api";
 
 async function scanDependenciesWrapper(packageJsonContent: string, packageLockContent?: string, riskConfig = null, context = null) {
   try {
-    console.log('📦 Scanning dependencies...');
-    
-    // Parse JSON strings into objects as expected by backend
     let packageJsonObj;
     let packageLockObj = null;
     
@@ -32,27 +29,9 @@ async function scanDependenciesWrapper(packageJsonContent: string, packageLockCo
       }
     }
     
-    // Debug before sending to backend
-    console.log('➡️ About to send packageJson:', packageJsonObj);
-    console.log('➡️ Dependencies:', packageJsonObj?.dependencies);
-    console.log('➡️ DevDependencies:', packageJsonObj?.devDependencies);
-    try {
-      const sampleDeps = Object.entries(packageJsonObj?.dependencies || {}).slice(0, 3);
-      console.log('➡️ Dependencies sample:', sampleDeps);
-    } catch (e) {
-      console.warn('⚠️ Could not iterate dependencies:', e);
-    }
-    
     const data = await scanDependencies(packageJsonObj, packageLockObj, riskConfig, context);
-    console.log('✅ Dependencies scan successful:', data);
-    
-    return {
-      success: true,
-      data: data
-    };
+    return { success: true, data };
   } catch (error) {
-    console.error('❌ Dependencies scan failed:', error);
-    
     return {
       success: false,
       error: error.message || 'Dependencies scanning failed',
@@ -75,18 +54,14 @@ export default function Dependencies() {
     // Test backend connection on component mount
     useEffect(() => {
         const testBackend = async () => {
-            console.log('🔍 Testing backend connection...');
             try {
                 const isHealthy = await testConnection();
-                const healthStatus = await getHealthStatus();
-                console.log('✅ Backend health status:', healthStatus);
+                await getHealthStatus();
                 setBackendStatus(isHealthy ? 'online' : 'offline');
-            } catch (error) {
-                console.error('❌ Backend connection failed:', error);
+            } catch {
                 setBackendStatus('offline');
             }
         };
-        
         testBackend();
     }, []);
 
@@ -111,14 +86,8 @@ export default function Dependencies() {
                 throw new Error("No package.json content provided for scanning.");
             }
 
-            console.log('🔍 Starting dependencies scan');
-            
-            // Get current risk settings
             const riskConfig = getRiskConfig();
             const context = getRiskContext();
-            
-            console.log('🎯 Using risk config for dependencies:', riskConfig);
-            console.log('🌍 Using context for dependencies:', context);
             
             const resp = await scanDependenciesWrapper(
                 options.packageJson, 
@@ -128,14 +97,12 @@ export default function Dependencies() {
             );
 
             if (resp.success) {
-                console.log('📊 Setting dependencies scan result (raw):', resp.data);
                 setScanResult(resp.data);
             } else {
                 throw new Error(resp.error);
             }
 
         } catch (err) {
-            console.error('🚨 Dependencies scan process failed:', err);
             setError(`Failed to complete dependencies scan: ${err.message}`);
         } finally {
             clearInterval(progressInterval);

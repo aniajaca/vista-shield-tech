@@ -72,15 +72,10 @@ export async function scanCode(code, language = 'javascript', riskConfig = null,
     const minimalResp = await postJson('/scan-code', minimalPayload);
     if (minimalResp.ok) return await minimalResp.json();
 
-    // Final fallback: try legacy /scan even if status is 500
     try {
-      console.warn('Trying legacy /scan fallback after /scan-code 500...');
       const legacyResp = await postJson('/scan', payload);
       if (legacyResp.ok) return await legacyResp.json();
-      console.warn('Legacy /scan also failed with status', legacyResp.status);
-    } catch (e) {
-      console.warn('Legacy /scan fallback threw:', e);
-    }
+    } catch {}
   }
   
   if (resp.status === 404 || resp.status === 405) {
@@ -91,11 +86,10 @@ export async function scanCode(code, language = 'javascript', riskConfig = null,
 }
 
 export async function scanFileUpload(file, language = 'javascript', riskConfig = null, context = null) {
-  console.log('📦 scanFileUpload -> /scan-file', { name: file?.name, size: file?.size, type: file?.type, language });
   const form = new FormData();
   form.append('file', file, file.name || 'code.' + language);
   form.append('language', language);
-  form.append('engine', 'semgrep'); // ensure Semgrep engine for real file scanning
+  form.append('engine', 'semgrep');
   if (riskConfig) form.append('riskConfig', JSON.stringify(riskConfig));
   if (context) form.append('context', JSON.stringify(context));
 
@@ -107,22 +101,16 @@ export async function scanFileUpload(file, language = 'javascript', riskConfig =
       body: form
     });
     if (resp.ok) {
-      const result = await resp.json();
-      console.log('✅ /scan-file success, metadata:', result.metadata);
-      return result;
+      return await resp.json();
     }
 
-    // If /scan-file is missing or not allowed, fall back to code snippet path
     if (resp.status === 404 || resp.status === 405) {
-      console.warn('ℹ️ /scan-file not available, falling back to /scan-code');
       const code = await file.text();
       return await scanCode(code, language, riskConfig, context, file.name);
     }
 
-    // Otherwise throw using our handler to surface details
     return await handleResponse(resp);
-  } catch (e) {
-    console.warn('⚠️ /scan-file failed, falling back to /scan-code. Reason:', e);
+  } catch {
     const code = await file.text();
     return await scanCode(code, language, riskConfig, context, file.name);
   }
@@ -146,8 +134,7 @@ export async function testConnection() {
     const response = await fetch(`${API_URL}/health`);
     const data = await response.json();
     return data.status === 'healthy';
-  } catch (error) {
-    console.error('Connection test failed:', error);
+  } catch {
     return false;
   }
 }
