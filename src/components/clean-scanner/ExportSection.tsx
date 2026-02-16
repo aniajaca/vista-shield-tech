@@ -36,7 +36,7 @@ function escapeHtml(str: string): string {
 }
 
 function renderFindingHtml(finding: any, index: number): string {
-  const { severity = 'Medium', title, message, description, cwe, owasp, cvss, location, code, snippet, remediation } = finding;
+  const { severity = 'Medium', title, message, description, cwe, owasp, location, code, snippet, remediation } = finding;
   const { file, line } = location || {};
   const vulnCode = code || snippet || '';
   const { id: cweId, name: cweName } = getCweInfo(cwe);
@@ -66,8 +66,14 @@ function renderFindingHtml(finding: any, index: number): string {
   if (owaspText) {
     html += '<div><strong>OWASP:</strong> ' + owaspText + '</div>';
   }
-  if (cvss?.baseScore) {
-    html += '<div><strong>CVSS:</strong> ' + cvss.baseScore.toFixed(1) + '</div>';
+  if (finding.bts) {
+    html += '<div><strong>BTS:</strong> ' + finding.bts.toFixed(1) + ' / 10</div>';
+  }
+  if (finding.crs) {
+    html += '<div><strong>CRS:</strong> ' + finding.crs + ' / 100</div>';
+  }
+  if (finding.priority?.priority) {
+    html += '<div><strong>Priority:</strong> ' + finding.priority.priority + ' — ' + finding.priority.action + '</div>';
   }
   html += '</div></div>';
   return html;
