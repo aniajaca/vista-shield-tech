@@ -73,12 +73,6 @@ function normalizeFinding(f) {
 
     owasp: f.owasp || [],
 
-    cvss: {
-      baseScore: cvssBase.baseScore,
-      adjustedScore: parseFloat(adjustedCvss.toFixed(1)),
-      vector: cvssBase.vector,
-    },
-
     message: f.message || '',
     description: f.message || '',
 
