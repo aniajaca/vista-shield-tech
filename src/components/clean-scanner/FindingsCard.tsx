@@ -52,7 +52,7 @@ const FindingItem = ({ finding }) => {
     const {
         title: rawTitle, name, check_id, message,
         severity = 'Medium',
-        cwe, owasp, cvss,
+        cwe, owasp,
         description: rawDesc,
         remediation: rawRemediation,
         location: rawLocation, start,
@@ -156,29 +156,6 @@ const FindingItem = ({ finding }) => {
                                     )}
                                 </InfoBlock>
                             )}
-                            {((cvss && (cvss.baseScore || cvss.adjustedScore)) || adjustedScore) && (
-                                <InfoBlock title="CVSS Score">
-                                    {typeof cvss?.baseScore === 'number' && (
-                                        <p>Base: <span className="font-semibold tabular-nums">{cvss.baseScore.toFixed(1)}</span></p>
-                                    )}
-                                    {typeof cvss?.baseScore !== 'number' && cvss?.baseScore && (
-                                        <p>Base: <span className="font-semibold tabular-nums">{String(cvss.baseScore)}</span></p>
-                                    )}
-                                    {typeof cvss?.adjustedScore === 'number' && cvss.adjustedScore !== cvss.baseScore && (
-                                        <p>Base CVSS: <span className="font-semibold tabular-nums text-orange-600">{cvss.adjustedScore.toFixed(1)}</span></p>
-                                    )}
-                                    {typeof cvss?.adjustedScore !== 'number' && cvss?.adjustedScore && cvss.adjustedScore !== cvss.baseScore && (
-                                        <p>Base CVSS: <span className="font-semibold tabular-nums text-orange-600">{String(cvss.adjustedScore)}</span></p>
-                                    )}
-                                    {typeof adjustedScore === 'number' && !cvss?.adjustedScore && (
-                                        <p>Base CVSS: <span className="font-semibold tabular-nums text-orange-600">{adjustedScore.toFixed(1)}</span></p>
-                                    )}
-                                    {adjustedSeverity && (
-                                        <p>Severity: <span className="font-semibold">{adjustedSeverity}</span></p>
-                                    )}
-                                    {cvss?.vector && <p className="text-xs text-muted-foreground">Vector: {String(cvss.vector)}</p>}
-                                </InfoBlock>
-                            )}
                             
                             {/* Risk Adjustments */}
                             {finding.risk?.adjusted?.adjustments && (
@@ -193,27 +170,40 @@ const FindingItem = ({ finding }) => {
                                 </InfoBlock>
                             )}
 
-                            {/* Neperia Risk Scores */}
-                            {(bts || crs) && (
-                                <InfoBlock title="Risk Assessment">
+                            {/* Neperia Risk Scores — the core innovation */}
+                            {(typeof bts === 'number' || typeof crs === 'number') && (
+                                <InfoBlock title="Neperia Risk Score">
                                     {typeof bts === 'number' && (
-                                        <p>BTS: <span className="font-semibold tabular-nums">{bts.toFixed(1)}</span></p>
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="text-xs text-[#6B7280]">BTS</span>
+                                            <span className="font-semibold tabular-nums">{bts.toFixed(1)}</span>
+                                            <span className="text-xs text-[#9CA3AF]">/ 10</span>
+                                        </div>
                                     )}
                                     {typeof crs === 'number' && (
-                                        <p>CRS: <span className="font-semibold tabular-nums">{crs}</span></p>
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="text-xs text-[#6B7280]">CRS</span>
+                                            <span className={`font-semibold tabular-nums ${
+                                                crs >= 80 ? 'text-red-600' : crs >= 65 ? 'text-orange-600' : crs >= 50 ? 'text-yellow-600' : 'text-green-600'
+                                            }`}>{crs}</span>
+                                            <span className="text-xs text-[#9CA3AF]">/ 100</span>
+                                        </div>
                                     )}
                                     {findingPriority?.priority && (
-                                        <div className="mt-1">
+                                        <div className="mt-2">
                                             <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
                                                 findingPriority.priority === 'P0' ? 'bg-red-100 text-red-700' :
                                                 findingPriority.priority === 'P1' ? 'bg-orange-100 text-orange-700' :
-                                                'bg-yellow-100 text-yellow-700'
+                                                findingPriority.priority === 'P2' ? 'bg-yellow-100 text-yellow-700' :
+                                                'bg-gray-100 text-gray-600'
                                             }`}>
                                                 {findingPriority.priority} — {findingPriority.action}
                                             </span>
                                         </div>
                                     )}
-                                    {sla && <p className="text-xs text-[#6B7280] mt-1">SLA: {sla} days</p>}
+                                    {typeof sla === 'number' && (
+                                        <p className="text-xs text-[#6B7280] mt-1">Remediation SLA: {sla} days</p>
+                                    )}
                                 </InfoBlock>
                             )}
 
