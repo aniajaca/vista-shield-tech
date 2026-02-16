@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { ChevronDown, MapPin, Lightbulb } from 'lucide-react';
+import { ChevronDown, MapPin, Lightbulb, Tag } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 // Safe formatter to render possibly nested objects as readable text
 const toText = (val: any): string => {
@@ -68,27 +69,35 @@ const FindingItem = ({ finding }) => {
     const title = toText(rawTitle || name || check_id || message) || "Security Vulnerability";
     const description = toText(cwe?.description ?? rawDesc ?? message) || 'Security vulnerability detected';
     
-    // Handle remediation - extract from object if needed and format cleanly
-    let remediation = '';
+    // Handle remediation - prefer structured fields from backend
+    let remediationApproach = '';
+    let remediationValidation = '';
+    let remediationRisk = '';
+    let remediationTimeline = '';
+    let remediationCategory = '';
     let remediationPriority = '';
     let remediationImpact = '';
     
     if (rawRemediation) {
         if (typeof rawRemediation === 'object') {
-            remediation = toText(rawRemediation.description || rawRemediation.guidance || rawRemediation.text || rawRemediation);
+            // Prefer .approach for vulnerability-specific guidance
+            remediationApproach = toText(rawRemediation.approach) || '';
+            remediationValidation = toText(rawRemediation.validation) || '';
+            remediationRisk = toText(rawRemediation.risk) || '';
+            remediationTimeline = toText(rawRemediation.timeline) || '';
+            remediationCategory = rawRemediation.resources?.category || '';
             remediationPriority = toText(rawRemediation.priority) || '';
             remediationImpact = toText(rawRemediation.impact) || '';
+            // Fallback to description/guidance if approach is empty
+            if (!remediationApproach) {
+                remediationApproach = toText(rawRemediation.description || rawRemediation.guidance || rawRemediation.text || rawRemediation);
+            }
         } else {
-            remediation = toText(rawRemediation);
+            remediationApproach = toText(rawRemediation);
         }
     }
-    if (!remediation) {
-        // Provide shell-specific remediation for command injection
-        if (title.toLowerCase().includes('command injection') || title.toLowerCase().includes('os command')) {
-            remediation = 'Use parameterized commands or shell escape functions. Avoid direct shell execution with user input. Implement input validation and use safe system call alternatives like execve() with proper argument arrays.';
-        } else {
-            remediation = 'Review and apply security best practices';
-        }
+    if (!remediationApproach) {
+        remediationApproach = 'Review and apply security best practices';
     }
     
     // Handle file location - check multiple possible fields
@@ -210,18 +219,48 @@ const FindingItem = ({ finding }) => {
                             {/* Context Inference */}
                             {inferredFactors && inferredFactors.length > 0 && (
                                 <InfoBlock title="Context Detected">
-                                    <div className="flex flex-wrap gap-1">
-                                        {inferredFactors.map((factor) => (
-                                            <span key={factor} className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
-                                                appliedFactors?.includes(factor)
-                                                    ? 'bg-orange-100 text-orange-800'
-                                                    : 'bg-gray-100 text-gray-600'
-                                            }`}>
-                                                {factor.replace(/([A-Z])/g, ' $1').trim()}
-                                                {appliedFactors?.includes(factor) ? ' ✓' : ''}
-                                            </span>
-                                        ))}
-                                    </div>
+                                    <TooltipProvider delayDuration={200}>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {inferredFactors.map((factor: string) => {
+                                                const isApplied = appliedFactors?.includes(factor);
+                                                const evidence = contextEvidence?.[factor];
+                                                const confidence = evidence?.confidence;
+                                                const evidenceList: string[] = evidence?.evidence || [];
+                                                const label = factor.replace(/([A-Z])/g, ' $1').trim();
+                                                const confidenceStr = typeof confidence === 'number' ? ` (${Math.round(confidence * 100)}%)` : '';
+
+                                                const badge = (
+                                                    <Badge
+                                                        key={factor}
+                                                        variant={isApplied ? 'default' : 'outline'}
+                                                        className={isApplied
+                                                            ? 'bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-200 cursor-default'
+                                                            : 'bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100 cursor-default'
+                                                        }
+                                                    >
+                                                        {label}{confidenceStr}{isApplied ? ' ✓' : ''}
+                                                    </Badge>
+                                                );
+
+                                                if (evidenceList.length > 0) {
+                                                    return (
+                                                        <Tooltip key={factor}>
+                                                            <TooltipTrigger asChild>{badge}</TooltipTrigger>
+                                                            <TooltipContent side="top" className="max-w-xs">
+                                                                <p className="font-medium text-xs mb-1">Evidence:</p>
+                                                                <ul className="text-xs space-y-0.5 list-disc pl-3">
+                                                                    {evidenceList.map((e, i) => (
+                                                                        <li key={i} className="font-mono text-[11px]">{e}</li>
+                                                                    ))}
+                                                                </ul>
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                    );
+                                                }
+                                                return badge;
+                                            })}
+                                        </div>
+                                    </TooltipProvider>
                                 </InfoBlock>
                             )}
                         </div>
@@ -248,7 +287,31 @@ const FindingItem = ({ finding }) => {
                                     Recommended Fix
                                 </h4>
                                 <div className="space-y-3">
-                                    <p className="text-sm text-[#374151] leading-relaxed">{remediation}</p>
+                                    <p className="text-sm text-[#374151] leading-relaxed">{remediationApproach}</p>
+                                    {remediationValidation && (
+                                        <div className="flex items-start gap-2">
+                                            <span className="text-xs font-medium text-[#6B7280] uppercase tracking-wide">Validation:</span>
+                                            <span className="text-xs text-[#374151]">{remediationValidation}</span>
+                                        </div>
+                                    )}
+                                    {remediationRisk && (
+                                        <div className="flex items-start gap-2">
+                                            <span className="text-xs font-medium text-[#6B7280] uppercase tracking-wide">Risk:</span>
+                                            <span className="text-xs text-[#374151]">{remediationRisk}</span>
+                                        </div>
+                                    )}
+                                    {remediationTimeline && (
+                                        <div className="flex items-start gap-2">
+                                            <span className="text-xs font-medium text-[#6B7280] uppercase tracking-wide">Timeline:</span>
+                                            <span className="text-xs text-[#374151]">{remediationTimeline}</span>
+                                        </div>
+                                    )}
+                                    {remediationCategory && (
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <Tag className="w-3.5 h-3.5 text-[#9CA3AF]" strokeWidth={1.5} />
+                                            <span className="text-xs text-[#6B7280]">{remediationCategory}</span>
+                                        </div>
+                                    )}
                                     {remediationPriority && (
                                         <div className="flex items-start gap-2">
                                             <span className="text-xs font-medium text-[#6B7280] uppercase tracking-wide">Priority:</span>
