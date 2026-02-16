@@ -29,14 +29,6 @@ const CWE_DATABASE = {
   'CWE-918': { name: 'Server-Side Request Forgery (SSRF)', category: 'Injection' },
 };
 
-const SEVERITY_TO_CVSS = {
-  CRITICAL: { baseScore: 9.8, vector: 'AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H' },
-  HIGH:     { baseScore: 7.5, vector: 'AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N' },
-  MEDIUM:   { baseScore: 5.3, vector: 'AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N' },
-  LOW:      { baseScore: 3.1, vector: 'AV:N/AC:H/PR:N/UI:R/S:U/C:L/I:N/A:N' },
-  WARNING:  { baseScore: 2.0, vector: 'AV:N/AC:H/PR:N/UI:R/S:U/C:N/I:N/A:N' },
-  INFO:     { baseScore: 0.0, vector: 'AV:N/AC:H/PR:N/UI:R/S:U/C:N/I:N/A:N' },
-};
 
 function extractTitleFromRuleId(ruleId) {
   if (!ruleId) return null;
@@ -61,10 +53,6 @@ function normalizeFinding(f) {
   const cweStr = f.cwe || f.cweId || '';
   const cweData = CWE_DATABASE[cweStr] || { name: cweStr.replace('CWE-', 'CWE #'), category: 'Security' };
   const severity = (f.severity || 'MEDIUM').toUpperCase();
-  const cvssBase = SEVERITY_TO_CVSS[severity] || SEVERITY_TO_CVSS.MEDIUM;
-
-  const crsAdjustment = f.crs ? Math.min((f.crs - 50) / 100, 0.5) : 0;
-  const adjustedCvss = Math.min(10, Math.max(0, cvssBase.baseScore + crsAdjustment));
 
   return {
     title: extractTitleFromRuleId(f.ruleId),
