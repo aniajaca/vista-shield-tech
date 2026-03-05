@@ -26,6 +26,7 @@ const CWE_DATABASE = {
   'CWE-704': { name: 'Incorrect Type Conversion', category: 'Input Validation' },
   'CWE-798': { name: 'Use of Hard-coded Credentials', category: 'Credentials Management' },
   'CWE-915': { name: 'Improperly Controlled Modification of Dynamically-Determined Object Attributes', category: 'Input Validation' },
+  'CWE-352': { name: 'Cross-Site Request Forgery (CSRF)', category: 'Session Management' },
   'CWE-918': { name: 'Server-Side Request Forgery (SSRF)', category: 'Injection' },
 };
 
@@ -128,7 +129,9 @@ function normalizeBackendResponse(response) {
   const SEVERITY_WEIGHTS = { Critical: 25, High: 15, Medium: 8, Low: 3 };
   const rawScore = findings.reduce((sum, f) => sum + (SEVERITY_WEIGHTS[f.severity] || 0), 0);
   const finalScore = Math.min(100, rawScore);
-  const riskLevel = finalScore >= 80 ? 'Critical' : finalScore >= 60 ? 'High' : finalScore >= 40 ? 'Medium' : finalScore >= 20 ? 'Low' : 'Minimal';
+
+  // Severity-based risk level: highest severity finding dictates the overall risk level
+  const riskLevel = stats.Critical > 0 ? 'Critical' : stats.High > 0 ? 'High' : stats.Medium > 0 ? 'Medium' : stats.Low > 0 ? 'Low' : 'Minimal';
 
   const engines = [...new Set(findings.map(f => f.engine).filter(Boolean))];
   const engineDisplay = engines.length > 0 ? engines.join(' + ') : 'semgrep';
