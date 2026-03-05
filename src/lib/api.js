@@ -128,8 +128,7 @@ function normalizeBackendResponse(response) {
   const SEVERITY_WEIGHTS = { Critical: 25, High: 15, Medium: 8, Low: 3 };
   const rawScore = findings.reduce((sum, f) => sum + (SEVERITY_WEIGHTS[f.severity] || 0), 0);
   const finalScore = Math.min(100, rawScore);
-  // Determine risk level from highest severity finding present, not just numeric score
-  const riskLevel = stats.Critical > 0 ? 'Critical' : stats.High > 0 ? 'High' : stats.Medium > 0 ? 'Medium' : stats.Low > 0 ? 'Low' : 'Minimal';
+  const riskLevel = finalScore >= 80 ? 'Critical' : finalScore >= 60 ? 'High' : finalScore >= 40 ? 'Medium' : finalScore >= 20 ? 'Low' : 'Minimal';
 
   const engines = [...new Set(findings.map(f => f.engine).filter(Boolean))];
   const engineDisplay = engines.length > 0 ? engines.join(' + ') : 'semgrep';
