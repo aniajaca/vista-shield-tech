@@ -66,7 +66,15 @@ const FindingItem = ({ finding }) => {
         confidence, impact, likelihood, ruleId
     } = finding;
 
-    const title = toText(rawTitle || name || check_id || message) || "Security Vulnerability";
+    // #6: Clean up title - strip tool prefixes, replace separators, title case
+    const rawTitleStr = toText(rawTitle || name || check_id || message) || "Security Vulnerability";
+    const title = rawTitleStr
+        .replace(/^(javascript|python|java|go|ruby|php|csharp|typescript|express|flask|django|lang|security|audit)\./gi, '')
+        .replace(/\./g, ' ')
+        .replace(/[-_]/g, ' ')
+        .replace(/\b\w/g, c => c.toUpperCase())
+        .replace(/\s+/g, ' ')
+        .trim();
     const description = toText(cwe?.description ?? rawDesc ?? message) || 'Security vulnerability detected';
     
     // Handle remediation - prefer structured fields from backend
@@ -80,21 +88,19 @@ const FindingItem = ({ finding }) => {
     
     if (rawRemediation) {
         if (typeof rawRemediation === 'object') {
-            // Prefer .approach for vulnerability-specific guidance
-            remediationApproach = toText(rawRemediation.approach) || '';
             remediationValidation = toText(rawRemediation.validation) || '';
             remediationRisk = toText(rawRemediation.risk) || '';
-            remediationTimeline = toText(rawRemediation.timeline) || '';
             remediationCategory = rawRemediation.resources?.category || '';
             remediationPriority = toText(rawRemediation.priority) || '';
             remediationImpact = toText(rawRemediation.impact) || '';
-            // Fallback to description/guidance if approach is empty
-            if (!remediationApproach) {
-                remediationApproach = toText(rawRemediation.description || rawRemediation.guidance || rawRemediation.text || rawRemediation);
-            }
-        } else {
-            remediationApproach = toText(rawRemediation);
         }
+    }
+    // #4: Use finding.message (Semgrep rule guidance) as primary remediation text
+    remediationApproach = toText(message) || '';
+    if (!remediationApproach && rawRemediation) {
+        remediationApproach = typeof rawRemediation === 'object' 
+            ? toText(rawRemediation.approach || rawRemediation.description || rawRemediation) 
+            : toText(rawRemediation);
     }
     if (!remediationApproach) {
         remediationApproach = 'Review and apply security best practices';
@@ -151,7 +157,7 @@ const FindingItem = ({ finding }) => {
                         <div className="md:col-span-1 space-y-6">
                             {cweDisplayId && (
                                 <InfoBlock title="CWE">
-                                    <p><span className="font-semibold">{cweDisplayId}</span>{cweName ? `: ${cweName}` : ''}</p>
+                                    <p><span className="font-semibold">{cweDisplayId}</span>{cweName && !/^CWE[\s#-]*\d+$/i.test(cweName) ? `: ${cweName}` : ''}</p>
                                 </InfoBlock>
                             )}
                             {owasp && (
@@ -210,8 +216,8 @@ const FindingItem = ({ finding }) => {
                                             </span>
                                         </div>
                                     )}
-                                    {typeof sla === 'number' && (
-                                        <p className="text-xs text-[#6B7280] mt-1">Remediation SLA: {sla} days</p>
+                                    {findingPriority?.sla && (
+                                        <p className="text-xs text-[#6B7280] mt-1">Remediation SLA: {findingPriority.sla}</p>
                                     )}
                                 </InfoBlock>
                             )}
@@ -226,7 +232,8 @@ const FindingItem = ({ finding }) => {
                                                 const evidence = contextEvidence?.[factor];
                                                 const confidence = evidence?.confidence;
                                                 const evidenceList: string[] = evidence?.evidence || [];
-                                                const label = factor.replace(/([A-Z])/g, ' $1').trim();
+                                                // #9: Proper capitalization for context labels
+                                                const label = factor.replace(/([A-Z])/g, ' $1').trim().replace(/^./, c => c.toUpperCase());
                                                 const confidenceStr = typeof confidence === 'number' ? ` (${Math.round(confidence * 100)}%)` : '';
 
                                                 const badge = (
@@ -300,16 +307,10 @@ const FindingItem = ({ finding }) => {
                                             <span className="text-xs text-[#374151]">{remediationRisk}</span>
                                         </div>
                                     )}
-                                    {remediationTimeline && (
-                                        <div className="flex items-start gap-2">
-                                            <span className="text-xs font-medium text-[#6B7280] uppercase tracking-wide">Timeline:</span>
-                                            <span className="text-xs text-[#374151]">{remediationTimeline}</span>
-                                        </div>
-                                    )}
                                     {remediationCategory && (
                                         <div className="flex items-center gap-2 mt-1">
                                             <Tag className="w-3.5 h-3.5 text-[#9CA3AF]" strokeWidth={1.5} />
-                                            <span className="text-xs text-[#6B7280]">{remediationCategory}</span>
+                                            <span className="text-xs text-[#6B7280]">{remediationCategory.replace(/^./, c => c.toUpperCase())}</span>
                                         </div>
                                     )}
                                     {remediationPriority && (

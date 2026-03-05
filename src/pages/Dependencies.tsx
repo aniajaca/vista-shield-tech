@@ -220,7 +220,7 @@ export default function Dependencies() {
                 </main>
 
                 <footer className="text-center mt-16">
-                  <p className="text-sm text-[#9CA3AF]">© 2025 Neperia. All rights reserved.</p>
+                  <p className="text-sm text-[#9CA3AF]">© {new Date().getFullYear()} Neperia. All rights reserved.</p>
                 </footer>
             </div>
         </div>
