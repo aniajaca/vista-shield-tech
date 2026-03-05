@@ -26,7 +26,7 @@ function getOwaspDisplay(owasp: any): string {
 
 function getRemediationText(remediation: any): string {
   if (typeof remediation === 'object') {
-    return remediation.approach || remediation.description || 'Review and apply security best practices';
+    return remediation.description || remediation.approach || 'Review and apply security best practices';
   }
   return remediation || 'Review and apply security best practices.';
 }
@@ -75,36 +75,12 @@ function renderFindingHtml(finding: any, index: number): string {
   if (finding.priority?.priority) {
     html += '<div><strong>Priority:</strong> ' + finding.priority.priority + ' — ' + finding.priority.action + '</div>';
   }
-  if (finding.priority?.sla) {
-    html += '<div><strong>Remediation SLA:</strong> ' + finding.priority.sla + '</div>';
-  }
-  if (finding.remediation?.validation) {
-    html += '<div><strong>Validation:</strong> ' + (typeof finding.remediation.validation === 'string' ? finding.remediation.validation : '') + '</div>';
-  }
-  if (finding.remediation?.risk) {
-    html += '<div><strong>Risk:</strong> ' + (typeof finding.remediation.risk === 'string' ? finding.remediation.risk : '') + '</div>';
-  }
-  if (finding.remediation?.resources?.category) {
-    html += '<div><strong>Category:</strong> ' + finding.remediation.resources.category + '</div>';
-  }
   html += '</div></div>';
   return html;
 }
 
 export default function ExportSection({ findings = [], riskAssessment = {}, performance = {}, metadata = {} }: ExportSectionProps) {
-  // Recalculate risk level based on highest severity finding present
-  const normSev = (sev: any) => {
-    if (!sev) return 'Low';
-    const s = String(sev).toLowerCase();
-    if (['critical', 'crit', 'error', 'severe'].includes(s)) return 'Critical';
-    if (['high', 'major'].includes(s)) return 'High';
-    if (['medium', 'moderate', 'warn', 'warning'].includes(s)) return 'Medium';
-    return 'Low';
-  };
-  const hasSev = (level: string) => findings.some(f => normSev(f?.severity) === level);
-  const computedRiskLevel = hasSev('Critical') ? 'Critical' : hasSev('High') ? 'High' : hasSev('Medium') ? 'Medium' : hasSev('Low') ? 'Low' : 'Minimal';
-  const { riskScore = 0 } = riskAssessment;
-  const riskLevel = computedRiskLevel;
+  const { riskScore = 0, riskLevel = 'N/A' } = riskAssessment;
 
   const downloadReport = (format) => {
     const timestamp = new Date().toLocaleDateString();
@@ -143,26 +119,9 @@ export default function ExportSection({ findings = [], riskAssessment = {}, perf
       findings.filter((f) => normalizeSeverity(f?.severity) === level).length;
 
     if (format === 'json') {
-        // Clean findings: use priority.sla as canonical SLA, remove contradictory top-level sla and remediation.timeline
-        const cleanedFindings = findings.map(f => {
-          const cleaned = { ...f };
-          // Use priority.sla as the single source of truth for SLA
-          if (cleaned.priority?.sla) {
-            cleaned.sla = cleaned.priority.sla;
-          }
-          // Remove contradictory remediation.timeline
-          if (cleaned.remediation && typeof cleaned.remediation === 'object') {
-            cleaned.remediation = { ...cleaned.remediation };
-            delete cleaned.remediation.timeline;
-          }
-          return cleaned;
-        });
         const jsonReport = {
-          riskAssessment: {
-            ...riskAssessment,
-            riskLevel: computedRiskLevel,
-          },
-          findings: cleanedFindings,
+          riskAssessment,
+          findings,
           metadata: {
             exportDate: new Date().toISOString(),
             totalFindings: findings.length,
