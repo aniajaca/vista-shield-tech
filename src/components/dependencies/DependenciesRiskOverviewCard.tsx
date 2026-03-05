@@ -51,7 +51,10 @@ const Metric = ({ label, value }) => (
 );
 
 export default function DependenciesRiskOverviewCard({ riskAssessment = {}, performance = {} }: DependenciesRiskOverviewCardProps) {
-    const { riskScore, riskLevel, findingsBreakdown = {} } = riskAssessment;
+    const { riskScore, findingsBreakdown = {} } = riskAssessment;
+    // #1: Risk label from highest severity finding
+    const severityOrder = ['Critical', 'High', 'Medium', 'Low'];
+    const riskLevel = severityOrder.find(s => (findingsBreakdown[s] || 0) > 0) || 'Low';
     const totalVulns = Object.values(findingsBreakdown).reduce((a, b) => (typeof b === 'number' ? a + b : a), 0);
     
     const { scanTime, packagesScanned, dataSources = [] } = performance;
@@ -80,7 +83,7 @@ export default function DependenciesRiskOverviewCard({ riskAssessment = {}, perf
                     <h3 className="text-xs font-medium uppercase text-[#6B7280] tracking-wider mb-2">Analysis Metrics</h3>
                     <Metric 
                         label="Scan Time" 
-                        value={typeof scanTime === 'number' ? `${scanTime.toFixed(2)}s` : 'N/A'}
+                        value={typeof scanTime === 'number' && scanTime > 0 ? `${scanTime.toFixed(2)}s` : '< 1s'}
                     />
                     <Metric 
                         label="Packages Scanned" 

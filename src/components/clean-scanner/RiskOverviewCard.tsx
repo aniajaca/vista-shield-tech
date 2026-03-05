@@ -50,22 +50,24 @@ const Metric = ({ label, value }) => (
 );
 
 export default function RiskOverviewCard({ riskAssessment = {}, metadata, performance = {} }: RiskOverviewCardProps) {
-    // Extract risk data from multiple possible locations
-    const { riskScore, riskLevel, findingsBreakdown = {} } = riskAssessment;
+    const { riskScore, findingsBreakdown = {} } = riskAssessment;
     
-    // Also check metadata for risk information
     const finalScore = riskScore || metadata?.risk?.final || metadata?.score?.final || 0;
-    const finalLevel = riskLevel || metadata?.risk?.level || metadata?.riskLevel || 'None';
+    
+    // #1: Risk label from highest severity finding present
+    const severityOrder = ['Critical', 'High', 'Medium', 'Low'];
+    const finalLevel = severityOrder.find(s => (findingsBreakdown[s] || 0) > 0) || 'Low';
     
     const totalVulns = Object.values(findingsBreakdown).reduce((a, b) => (typeof b === 'number' ? a + b : a), 0);
     
     const { scanTime } = performance;
     
-    // Normalize engine and scan time from metadata
     const engineRaw = metadata?.engine || metadata?.scanner || metadata?.tool;
     const engineStr = typeof engineRaw === 'string' ? engineRaw.toLowerCase() : (engineRaw?.name?.toLowerCase?.());
     const engineDisplay = engineStr?.includes('semgrep') ? 'Semgrep' : engineStr?.includes('ast') ? 'AST Scanner' : (engineRaw || 'Semgrep');
-    const scanTimeDisplay = metadata?.scan_time || (typeof scanTime === 'number' ? `${scanTime.toFixed(2)}s` : 'N/A');
+    // #10: Show "< 1s" instead of "N/A"
+    const rawScanTime = metadata?.scan_time || (typeof scanTime === 'number' && scanTime > 0 ? `${scanTime.toFixed(2)}s` : null);
+    const scanTimeDisplay = rawScanTime || '< 1s';
     
     return (
         <div className="bg-white p-6 rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
