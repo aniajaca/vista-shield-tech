@@ -52,7 +52,7 @@ function deriveRiskLevel(findings: any[]): string {
     if (['medium', 'moderate', 'warn', 'warning'].includes(s)) return 'Medium';
     return 'Low';
   };
-  const order = ['Critical', 'High', 'Medium', 'Low'];
+  const order: Array<'Critical' | 'High' | 'Medium' | 'Low'> = ['Critical', 'High', 'Medium', 'Low'];
   const severities = new Set(findings.map(f => normSev(f?.severity)));
   return order.find(s => severities.has(s)) || 'Low';
 }

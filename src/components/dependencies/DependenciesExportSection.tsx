@@ -27,7 +27,7 @@ function deriveRiskLevel(vulns: any[]): string {
     if (['medium', 'moderate', 'warn', 'warning'].includes(s)) return 'Medium';
     return 'Low';
   };
-  const order = ['Critical', 'High', 'Medium', 'Low'];
+  const order: Array<'Critical' | 'High' | 'Medium' | 'Low'> = ['Critical', 'High', 'Medium', 'Low'];
   const severities = new Set(vulns.map(v => normSev(v?.severity || v?.vulnerability?.severity)));
   return order.find(s => severities.has(s)) || 'Low';
 }
