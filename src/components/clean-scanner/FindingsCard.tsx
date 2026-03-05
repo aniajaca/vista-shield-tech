@@ -81,7 +81,7 @@ const FindingItem = ({ finding }) => {
     let remediationApproach = '';
     let remediationValidation = '';
     let remediationRisk = '';
-    let remediationTimeline = '';
+    
     let remediationCategory = '';
     let remediationPriority = '';
     let remediationImpact = '';
