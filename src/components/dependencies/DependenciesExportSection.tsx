@@ -17,13 +17,31 @@ interface DependenciesExportSectionProps {
     performance?: Performance;
 }
 
+// #1: Derive risk label from highest severity vulnerability
+function deriveRiskLevel(vulns: any[]): string {
+  const normSev = (sev: any) => {
+    if (!sev) return 'Low';
+    const s = String(sev).toLowerCase();
+    if (['critical', 'crit', 'error', 'severe'].includes(s)) return 'Critical';
+    if (['high', 'major'].includes(s)) return 'High';
+    if (['medium', 'moderate', 'warn', 'warning'].includes(s)) return 'Medium';
+    return 'Low';
+  };
+  const order = ['Critical', 'High', 'Medium', 'Low'];
+  const severities = new Set(vulns.map(v => normSev(v?.severity || v?.vulnerability?.severity)));
+  return order.find(s => severities.has(s)) || 'Low';
+}
+
 export default function DependenciesExportSection({ 
     vulnerabilities = [], 
     riskAssessment = {},
     performance = {}
 }: DependenciesExportSectionProps) {
-    const { riskScore = 0, riskLevel = 'N/A' } = riskAssessment;
+    const { riskScore = 0 } = riskAssessment;
+    // #1: Derive risk level from highest severity
+    const riskLevel = deriveRiskLevel(vulnerabilities);
     const { scanTime, packagesScanned, dataSources = [] } = performance;
+    const currentYear = new Date().getFullYear();
 
     const downloadReport = (format) => {
         const timestamp = new Date().toLocaleDateString();
@@ -66,7 +84,10 @@ export default function DependenciesExportSection({
 
         if (format === 'json') {
             const jsonReport = {
-                riskAssessment,
+                riskAssessment: {
+                    ...riskAssessment,
+                    riskLevel,
+                },
                 performance,
                 vulnerabilities,
                 metadata: {
@@ -86,7 +107,6 @@ export default function DependenciesExportSection({
         } else if (format === 'html' || format === 'pdf') {
             let reportContent;
             if (format === 'html') {
-                // TECHNICAL HTML REPORT
                 reportContent = `
                     <h2>Detailed Dependency Vulnerabilities</h2>
                     ${vulnerabilities.map((vuln, index) => {
@@ -124,7 +144,6 @@ export default function DependenciesExportSection({
                     }).join('')}
                 `;
             } else {
-                // COMPREHENSIVE PDF REPORT WITH ALL SCAN INFORMATION
                 reportContent = `
                     <h2>Executive Summary</h2>
                     <div class="meta">
@@ -146,7 +165,7 @@ export default function DependenciesExportSection({
                     
                     <h2>Scan Performance</h2>
                     <div class="meta">
-                        <div class="meta-item"><span class="meta-label">Scan Time</span><span class="meta-value">${typeof scanTime === 'number' ? scanTime.toFixed(2) + 's' : 'N/A'}</span></div>
+                        <div class="meta-item"><span class="meta-label">Scan Time</span><span class="meta-value">${typeof scanTime === 'number' && scanTime > 0 ? scanTime.toFixed(2) + 's' : '< 1s'}</span></div>
                         <div class="meta-item"><span class="meta-label">Packages Scanned</span><span class="meta-value">${packagesScanned || 'N/A'}</span></div>
                         <div class="meta-item"><span class="meta-label">Data Sources</span><span class="meta-value">${dataSources.join(', ') || 'N/A'}</span></div>
                     </div>
@@ -202,6 +221,9 @@ export default function DependenciesExportSection({
                         <p style="color: #6B7280;">Security Report - Generated ${timestamp}</p>
                     </div>
                     ${reportContent}
+                    <footer style="margin-top: 48px; border-top: 1px solid #E5E7EB; padding-top: 16px; text-align: center; color: #9CA3AF; font-size: 12px;">
+                        © ${currentYear} Neperia. All rights reserved.
+                    </footer>
                 </body>
                 </html>`;
 
