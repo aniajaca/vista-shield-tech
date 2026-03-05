@@ -14,7 +14,9 @@ interface ExportSectionProps {
 
 function getCweInfo(cwe: any) {
   const id = typeof cwe === 'string' ? cwe : cwe?.id || 'N/A';
-  const name = typeof cwe === 'object' ? cwe?.name || '' : '';
+  const rawName = typeof cwe === 'object' ? cwe?.name || '' : '';
+  // #4: Never display "CWE #352" style fallbacks
+  const name = rawName && !/^CWE[\s#-]*\d+$/i.test(rawName) ? rawName : '';
   return { id, name };
 }
 
@@ -24,15 +26,35 @@ function getOwaspDisplay(owasp: any): string {
   return '';
 }
 
-function getRemediationText(remediation: any): string {
-  if (typeof remediation === 'object') {
-    return remediation.description || remediation.approach || 'Review and apply security best practices';
-  }
-  return remediation || 'Review and apply security best practices.';
-}
-
 function escapeHtml(str: string): string {
   return str.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// #5: Clean raw Semgrep rule titles
+function cleanTitle(raw: string): string {
+  if (!raw) return 'Security Vulnerability';
+  return raw
+    .replace(/^(javascript|python|java|go|ruby|php|csharp|typescript|express|flask|django|lang|security|audit)\./gi, '')
+    .replace(/\./g, ' ')
+    .replace(/[-_]/g, ' ')
+    .replace(/\b\w/g, c => c.toUpperCase())
+    .replace(/\s+/g, ' ')
+    .trim() || 'Security Vulnerability';
+}
+
+// #1: Derive risk label from highest severity finding
+function deriveRiskLevel(findings: any[]): string {
+  const normSev = (sev: any) => {
+    if (!sev) return 'Low';
+    const s = String(sev).toLowerCase();
+    if (['critical', 'crit', 'error', 'severe'].includes(s)) return 'Critical';
+    if (['high', 'major'].includes(s)) return 'High';
+    if (['medium', 'moderate', 'warn', 'warning'].includes(s)) return 'Medium';
+    return 'Low';
+  };
+  const order: Array<'Critical' | 'High' | 'Medium' | 'Low'> = ['Critical', 'High', 'Medium', 'Low'];
+  const severities = new Set(findings.map(f => normSev(f?.severity)));
+  return order.find(s => severities.has(s)) || 'Low';
 }
 
 function renderFindingHtml(finding: any, index: number): string {
@@ -41,11 +63,32 @@ function renderFindingHtml(finding: any, index: number): string {
   const vulnCode = code || snippet || '';
   const { id: cweId, name: cweName } = getCweInfo(cwe);
   const owaspText = getOwaspDisplay(owasp);
-  const remText = getRemediationText(remediation);
+
+  // #7: Prefer finding.message over remediation.description
+  let remText = message || '';
+  if (!remText) {
+    if (typeof remediation === 'object') {
+      remText = remediation.approach || remediation.description || 'Review and apply security best practices';
+    } else {
+      remText = remediation || 'Review and apply security best practices.';
+    }
+  }
+
+  // #5: Clean title
+  const displayTitle = cleanTitle(title || message || '');
+
+  // #6: Capitalize security category
+  let categoryHtml = '';
+  if (remediation?.resources?.category) {
+    let cat = remediation.resources.category;
+    cat = cat.replace(/^./, (c: string) => c.toUpperCase());
+    if (/^unknown$/i.test(cat)) cat = 'Unclassified';
+    categoryHtml = `<div><strong>Category:</strong> ${cat}</div>`;
+  }
 
   let html = '<div class="finding">';
   html += '<div style="display:flex; justify-content:space-between; align-items:flex-start;">';
-  html += '<h3>' + (index + 1) + '. ' + (title || message) + '</h3>';
+  html += '<h3>' + (index + 1) + '. ' + displayTitle + '</h3>';
   html += '<span class="pill pill-' + severity.toLowerCase() + '">' + severity + '</span>';
   html += '</div>';
   html += '<div style="font-size: 12px; color: #6B7280; font-family: \'Monaco\', monospace; margin-top: 4px;">' + (file || 'N/A') + ':' + (line || 'N/A') + '</div>';
@@ -75,12 +118,20 @@ function renderFindingHtml(finding: any, index: number): string {
   if (finding.priority?.priority) {
     html += '<div><strong>Priority:</strong> ' + finding.priority.priority + ' — ' + finding.priority.action + '</div>';
   }
+  // #2: SLA from finding.priority.sla
+  if (finding.priority?.sla) {
+    html += '<div><strong>SLA:</strong> ' + finding.priority.sla + '</div>';
+  }
+  if (categoryHtml) html += categoryHtml;
   html += '</div></div>';
   return html;
 }
 
 export default function ExportSection({ findings = [], riskAssessment = {}, performance = {}, metadata = {} }: ExportSectionProps) {
-  const { riskScore = 0, riskLevel = 'N/A' } = riskAssessment;
+  const { riskScore = 0 } = riskAssessment;
+  // #1: Derive risk level from highest severity finding
+  const riskLevel = deriveRiskLevel(findings);
+  const currentYear = new Date().getFullYear();
 
   const downloadReport = (format) => {
     const timestamp = new Date().toLocaleDateString();
@@ -119,9 +170,42 @@ export default function ExportSection({ findings = [], riskAssessment = {}, perf
       findings.filter((f) => normalizeSeverity(f?.severity) === level).length;
 
     if (format === 'json') {
+        // #1: Use derived risk level; #2: Map SLA; #3: Remove timeline; #4/#5/#6/#7: Clean findings
+        const cleanedFindings = findings.map(f => {
+          const cleaned = { ...f };
+          // #5: Clean title
+          cleaned.title = cleanTitle(f.title || f.message || '');
+          // #2: SLA from priority.sla
+          cleaned.sla = f.priority?.sla || undefined;
+          // #3: Remove timeline from remediation
+          if (cleaned.remediation && typeof cleaned.remediation === 'object') {
+            const { timeline, ...restRem } = cleaned.remediation;
+            // #6: Capitalize category
+            if (restRem.resources?.category) {
+              let cat = restRem.resources.category;
+              cat = cat.replace(/^./, (c: string) => c.toUpperCase());
+              if (/^unknown$/i.test(cat)) cat = 'Unclassified';
+              restRem.resources = { ...restRem.resources, category: cat };
+            }
+            // #7: Prefer message over description
+            if (f.message) restRem.description = f.message;
+            cleaned.remediation = restRem;
+          }
+          // #4: Clean CWE name
+          if (cleaned.cwe && typeof cleaned.cwe === 'object' && cleaned.cwe.name) {
+            if (/^CWE[\s#-]*\d+$/i.test(cleaned.cwe.name)) {
+              cleaned.cwe = { ...cleaned.cwe, name: undefined };
+            }
+          }
+          return cleaned;
+        });
+
         const jsonReport = {
-          riskAssessment,
-          findings,
+          riskAssessment: {
+            ...riskAssessment,
+            riskLevel,
+          },
+          findings: cleanedFindings,
           metadata: {
             exportDate: new Date().toISOString(),
             totalFindings: findings.length,
@@ -183,6 +267,9 @@ export default function ExportSection({ findings = [], riskAssessment = {}, perf
                 <p style="color: #6B7280;">Security Report - Generated ${timestamp}</p>
             </div>
             ${reportContent}
+            <footer style="margin-top: 48px; border-top: 1px solid #E5E7EB; padding-top: 16px; text-align: center; color: #9CA3AF; font-size: 12px;">
+                © ${currentYear} Neperia. All rights reserved.
+            </footer>
         </body>
         </html>`;
 
