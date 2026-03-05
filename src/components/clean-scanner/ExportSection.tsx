@@ -26,7 +26,7 @@ function getOwaspDisplay(owasp: any): string {
 
 function getRemediationText(remediation: any): string {
   if (typeof remediation === 'object') {
-    return remediation.description || remediation.approach || 'Review and apply security best practices';
+    return remediation.approach || remediation.description || 'Review and apply security best practices';
   }
   return remediation || 'Review and apply security best practices.';
 }
@@ -74,6 +74,9 @@ function renderFindingHtml(finding: any, index: number): string {
   }
   if (finding.priority?.priority) {
     html += '<div><strong>Priority:</strong> ' + finding.priority.priority + ' — ' + finding.priority.action + '</div>';
+  }
+  if (finding.priority?.sla) {
+    html += '<div><strong>SLA:</strong> ' + finding.priority.sla + '</div>';
   }
   html += '</div></div>';
   return html;

@@ -210,8 +210,8 @@ const FindingItem = ({ finding }) => {
                                             </span>
                                         </div>
                                     )}
-                                    {typeof sla === 'number' && (
-                                        <p className="text-xs text-[#6B7280] mt-1">Remediation SLA: {sla} days</p>
+                                    {findingPriority?.sla && (
+                                        <p className="text-xs text-[#6B7280] mt-1">Remediation SLA: {findingPriority.sla}</p>
                                     )}
                                 </InfoBlock>
                             )}
