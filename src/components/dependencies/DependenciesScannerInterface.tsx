@@ -142,7 +142,7 @@ export default function DependenciesScannerInterface({ onScan, isLoading }: Depe
                                     clearFile(type);
                                 }
                             }}
-                            className="text-xs text-[#6B7280] hover:text-[#AFCB0E]"
+                            className="text-xs text-[#6B7280] hover:text-[#7a8f0a] hover:bg-[rgba(175,203,14,0.1)]"
                         >
                             {data.mode === 'file' ? 'Paste JSON' : 'Upload File'}
                         </Button>
