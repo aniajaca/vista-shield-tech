@@ -162,10 +162,10 @@ const SEVERITY_COLORS: Record<string, string> = {
   minimal: "#9ca3af",
 };
 
-// Neperia green from the app's accent
-const NEPERIA_GREEN = "hsl(84, 81%, 44%)";
-const NEPERIA_GREEN_DARK = "hsl(84, 70%, 32%)";
-const NEPERIA_GREEN_BG = "rgba(101, 183, 30, 0.12)";
+// Neperia brand green — consistent with #AFCB0E used across the app
+const NEPERIA_GREEN = "#AFCB0E";
+const NEPERIA_GREEN_DARK = "#7A8E0A";
+const NEPERIA_GREEN_BG = "rgba(175, 203, 14, 0.12)";
 
 // ─── Micro-components ───
 
@@ -780,7 +780,7 @@ export default function RiskConfiguration() {
                 padding: "8px 16px",
                 borderRadius: 6,
                 border: "none",
-                background: hasChanges ? NEPERIA_GREEN : "rgba(101, 183, 30, 0.2)",
+                background: hasChanges ? NEPERIA_GREEN : "rgba(175, 203, 14, 0.2)",
                 color: hasChanges ? "#fff" : NEPERIA_GREEN_DARK,
                 fontSize: 12,
                 fontWeight: 600,
