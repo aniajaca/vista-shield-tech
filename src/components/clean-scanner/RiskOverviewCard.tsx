@@ -93,6 +93,19 @@ export default function RiskOverviewCard({ riskAssessment = {}, metadata, perfor
     const rawScanTime = metadata?.scan_time || (typeof performance.scanTime === 'number' && performance.scanTime > 0 ? `${performance.scanTime.toFixed(2)}s` : null);
     const scanTimeDisplay = rawScanTime || '< 1s';
 
+    // Context summary: count unique amplifiers & attenuators across all findings
+    const ATTENUATING = ['hasAuthentication', 'testOrDevCode', 'internalNetwork', 'isProtected'];
+    const allAmplifiers = new Set<string>();
+    const allAttenuators = new Set<string>();
+    findings.forEach(f => {
+        const factors: string[] = f.inferredFactors || [];
+        factors.forEach(factor => {
+            if (ATTENUATING.includes(factor)) allAttenuators.add(factor);
+            else allAmplifiers.add(factor);
+        });
+    });
+    const hasContext = allAmplifiers.size > 0 || allAttenuators.size > 0;
+
     return (
         <div className="glass-panel rounded-xl p-5">
             <div className="flex items-center gap-6">
@@ -137,6 +150,11 @@ export default function RiskOverviewCard({ riskAssessment = {}, metadata, perfor
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-muted text-muted-foreground">
                         Profile: Default
                     </span>
+                    {hasContext && (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-muted text-muted-foreground">
+                            Context: {allAmplifiers.size} amplifier{allAmplifiers.size !== 1 ? 's' : ''}, {allAttenuators.size} attenuator{allAttenuators.size !== 1 ? 's' : ''}
+                        </span>
+                    )}
                 </div>
             </div>
         </div>
