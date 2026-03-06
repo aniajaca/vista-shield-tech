@@ -147,10 +147,10 @@ const FACTOR_ICONS: Record<string, string> = {
 };
 
 const BAND_COLORS: Record<string, { bg: string; border: string; text: string; dot: string }> = {
-  P0: { bg: "#2d0a0a", border: "#dc2626", text: "#fca5a5", dot: "#ef4444" },
-  P1: { bg: "#2d1a0a", border: "#ea580c", text: "#fdba74", dot: "#f97316" },
-  P2: { bg: "#2d2a0a", border: "#ca8a04", text: "#fde68a", dot: "#eab308" },
-  P3: { bg: "#0a1a2d", border: "#2563eb", text: "#93c5fd", dot: "#3b82f6" },
+  P0: { bg: "rgba(239, 68, 68, 0.08)", border: "rgba(239, 68, 68, 0.25)", text: "#dc2626", dot: "#ef4444" },
+  P1: { bg: "rgba(249, 115, 22, 0.08)", border: "rgba(249, 115, 22, 0.25)", text: "#ea580c", dot: "#f97316" },
+  P2: { bg: "rgba(234, 179, 8, 0.08)", border: "rgba(234, 179, 8, 0.25)", text: "#b45309", dot: "#eab308" },
+  P3: { bg: "rgba(37, 99, 235, 0.08)", border: "rgba(37, 99, 235, 0.25)", text: "#2563eb", dot: "#3b82f6" },
 };
 
 const SEVERITY_COLORS: Record<string, string> = {
@@ -159,8 +159,13 @@ const SEVERITY_COLORS: Record<string, string> = {
   medium: "#eab308",
   low: "#3b82f6",
   info: "#6b7280",
-  minimal: "#374151",
+  minimal: "#9ca3af",
 };
+
+// Neperia green from the app's accent
+const NEPERIA_GREEN = "hsl(84, 81%, 44%)";
+const NEPERIA_GREEN_DARK = "hsl(84, 70%, 32%)";
+const NEPERIA_GREEN_BG = "rgba(101, 183, 30, 0.12)";
 
 // ─── Micro-components ───
 
@@ -173,7 +178,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
         height: 20,
         borderRadius: 10,
         border: "none",
-        background: checked ? "#10b981" : "#374151",
+        background: checked ? NEPERIA_GREEN : "#d1d5db",
         position: "relative",
         cursor: "pointer",
         transition: "background 0.2s",
@@ -190,6 +195,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
           borderRadius: "50%",
           background: "#fff",
           transition: "left 0.2s",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
         }}
       />
     </button>
@@ -225,17 +231,18 @@ function NumberInput({
         style={{
           width,
           padding: "6px 8px",
-          background: "#111827",
-          border: "1px solid #374151",
+          background: "#ffffff",
+          border: "1px solid rgba(0,0,0,0.12)",
           borderRadius: 6,
-          color: "#e5e7eb",
+          color: "#1a1a2a",
           fontSize: 13,
           fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
           textAlign: "right",
           outline: "none",
+          boxShadow: "inset 0 1px 2px rgba(0,0,0,0.06)",
         }}
-        onFocus={(e) => (e.target.style.borderColor = "#6366f1")}
-        onBlur={(e) => (e.target.style.borderColor = "#374151")}
+        onFocus={(e) => (e.target.style.borderColor = NEPERIA_GREEN)}
+        onBlur={(e) => (e.target.style.borderColor = "rgba(0,0,0,0.12)")}
       />
       {suffix && (
         <span style={{ color: "#6b7280", fontSize: 12, fontWeight: 500 }}>{suffix}</span>
@@ -245,7 +252,7 @@ function NumberInput({
 }
 
 function Divider() {
-  return <div style={{ height: 1, background: "#1f2937", margin: "4px 0" }} />;
+  return <div style={{ height: 1, background: "rgba(0,0,0,0.06)", margin: "4px 0" }} />;
 }
 
 // ─── Main Component ───
@@ -291,8 +298,55 @@ export default function RiskConfiguration() {
     .reduce((acc: number, f) => acc * f.value, 1)
     .toFixed(2);
 
+  const stageTagStyle: React.CSSProperties = {
+    fontSize: 10,
+    background: NEPERIA_GREEN_BG,
+    color: NEPERIA_GREEN_DARK,
+    padding: "2px 6px",
+    borderRadius: 4,
+    fontWeight: 600,
+  };
+
+  const sectionButtonStyle: React.CSSProperties = {
+    width: "100%",
+    padding: "14px 16px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    background: "none",
+    border: "none",
+    cursor: "pointer",
+    color: "#1a1a2a",
+  };
+
+  const sectionCardStyle: React.CSSProperties = {
+    background: "rgba(255, 255, 255, 0.5)",
+    backdropFilter: "blur(12px)",
+    WebkitBackdropFilter: "blur(12px)",
+    border: "1px solid rgba(255, 255, 255, 0.5)",
+    borderRadius: 12,
+    overflow: "hidden",
+    marginBottom: 8,
+  };
+
+  const rowStyle: React.CSSProperties = {
+    background: "rgba(255, 255, 255, 0.4)",
+    border: "1px solid rgba(0, 0, 0, 0.06)",
+    borderRadius: 8,
+  };
+
   return (
-    <div style={{ background: "#030712", color: "#e5e7eb", minHeight: "100%" }}>
+    <div
+      style={{
+        background: "rgba(255, 255, 255, 0.65)",
+        backdropFilter: "blur(20px) saturate(180%)",
+        WebkitBackdropFilter: "blur(20px) saturate(180%)",
+        border: "1px solid rgba(255, 255, 255, 0.4)",
+        boxShadow: "0 8px 32px rgba(0, 0, 0, 0.08)",
+        color: "#1a1a2a",
+        minHeight: "100%",
+      }}
+    >
       <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
         rel="stylesheet"
@@ -306,21 +360,21 @@ export default function RiskConfiguration() {
         }}
       >
         {/* ── Header ── */}
-        <div style={{ padding: "20px 16px 12px", borderBottom: "1px solid #1f2937" }}>
+        <div style={{ padding: "20px 16px 12px", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
             <span style={{ fontSize: 18 }}>⚙️</span>
-            <h2 style={{ fontSize: 16, fontWeight: 600, margin: 0, color: "#f9fafb" }}>
+            <h2 style={{ fontSize: 16, fontWeight: 600, margin: 0, color: "#1a1a2a" }}>
               Risk Configuration
             </h2>
           </div>
-          <p style={{ color: "#6b7280", fontSize: 12, margin: 0 }}>
+          <p style={{ color: "#4b5563", fontSize: 12, margin: 0 }}>
             Configure the multi-stage scoring pipeline: BTS → CRS → BPS → FARS → PRS
           </p>
         </div>
 
         {/* ── Profile Selector ── */}
         <div style={{ padding: "16px" }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>
             Active Profile
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, marginBottom: 8 }}>
@@ -331,9 +385,9 @@ export default function RiskConfiguration() {
                 style={{
                   padding: "10px 8px",
                   borderRadius: 8,
-                  border: selectedProfileId === p.id ? "1.5px solid #6366f1" : "1px solid #1f2937",
-                  background: selectedProfileId === p.id ? "#1e1b4b" : "#0a0e17",
-                  color: selectedProfileId === p.id ? "#c7d2fe" : "#9ca3af",
+                  border: selectedProfileId === p.id ? `1.5px solid ${NEPERIA_GREEN}` : "1px solid rgba(0,0,0,0.1)",
+                  background: selectedProfileId === p.id ? NEPERIA_GREEN_BG : "rgba(255,255,255,0.6)",
+                  color: selectedProfileId === p.id ? NEPERIA_GREEN_DARK : "#4b5563",
                   fontSize: 12,
                   fontWeight: selectedProfileId === p.id ? 600 : 400,
                   cursor: "pointer",
@@ -345,7 +399,7 @@ export default function RiskConfiguration() {
               </button>
             ))}
           </div>
-          <p style={{ color: "#6b7280", fontSize: 11, margin: 0, fontStyle: "italic" }}>
+          <p style={{ color: "#4b5563", fontSize: 11, margin: 0, fontStyle: "italic" }}>
             {config.description}
           </p>
         </div>
@@ -353,33 +407,23 @@ export default function RiskConfiguration() {
         <Divider />
 
         {/* ── Context Multipliers (CRS Stage) ── */}
-        <div style={{ borderBottom: "1px solid #1f2937" }}>
+        <div style={sectionCardStyle}>
           <button
             onClick={() => toggleSection("context")}
-            style={{
-              width: "100%",
-              padding: "14px 16px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              color: "#e5e7eb",
-            }}
+            style={sectionButtonStyle}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontWeight: 600, fontSize: 13 }}>
+              <span style={{ fontWeight: 600, fontSize: 13, color: "#1a1a2a" }}>
                 Context Multipliers
               </span>
-              <span style={{ fontSize: 10, background: "#1e1b4b", color: "#a5b4fc", padding: "2px 6px", borderRadius: 4, fontWeight: 600 }}>
+              <span style={stageTagStyle}>
                 CRS Stage
               </span>
               <span style={{ fontSize: 11, color: "#6b7280" }}>
                 {enabledFactorCount} active · max {maxCombinedMultiplier}×
               </span>
             </div>
-            <span style={{ color: "#6b7280", fontSize: 12, transition: "transform 0.2s", transform: expandedSections.context ? "rotate(180deg)" : "rotate(0deg)" }}>
+            <span style={{ color: "#9ca3af", fontSize: 12, transition: "transform 0.2s", transform: expandedSections.context ? "rotate(180deg)" : "rotate(0deg)" }}>
               ▼
             </span>
           </button>
@@ -387,10 +431,10 @@ export default function RiskConfiguration() {
           {expandedSections.context && (
             <div style={{ padding: "0 16px 16px" }}>
               {/* Total Lift Cap */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: "#0f172a", borderRadius: 8, marginBottom: 12, border: "1px solid #1e293b" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", ...rowStyle, marginBottom: 12 }}>
                 <div>
-                  <p style={{ fontWeight: 600, fontSize: 12, margin: 0, color: "#e2e8f0" }}>Total Lift Cap</p>
-                  <p style={{ fontSize: 11, color: "#64748b", margin: "2px 0 0" }}>
+                  <p style={{ fontWeight: 600, fontSize: 12, margin: 0, color: "#1a1a2a" }}>Total Lift Cap</p>
+                  <p style={{ fontSize: 11, color: "#6b7280", margin: "2px 0 0" }}>
                     Maximum CRS uplift from context factors
                   </p>
                 </div>
@@ -414,8 +458,7 @@ export default function RiskConfiguration() {
                       alignItems: "center",
                       justifyContent: "space-between",
                       padding: "8px 10px",
-                      background: factor.enabled ? "#111827" : "#0a0e17",
-                      borderRadius: 6,
+                      ...rowStyle,
                       opacity: factor.enabled ? 1 : 0.5,
                       transition: "all 0.15s",
                     }}
@@ -424,7 +467,7 @@ export default function RiskConfiguration() {
                       {FACTOR_ICONS[key]}
                     </span>
                     <div style={{ flex: 1, marginLeft: 8 }}>
-                      <span style={{ fontSize: 12, fontWeight: 500, color: "#d1d5db" }}>
+                      <span style={{ fontSize: 12, fontWeight: 500, color: "#1a1a2a" }}>
                         {FACTOR_LABELS[key]}
                       </span>
                     </div>
@@ -450,33 +493,21 @@ export default function RiskConfiguration() {
           )}
         </div>
 
-        <Divider />
-
         {/* ── Priority Bands & SLA ── */}
-        <div style={{ borderBottom: "1px solid #1f2937" }}>
+        <div style={sectionCardStyle}>
           <button
             onClick={() => toggleSection("priority")}
-            style={{
-              width: "100%",
-              padding: "14px 16px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              color: "#e5e7eb",
-            }}
+            style={sectionButtonStyle}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontWeight: 600, fontSize: 13 }}>
+              <span style={{ fontWeight: 600, fontSize: 13, color: "#1a1a2a" }}>
                 Priority Bands & SLA
               </span>
-              <span style={{ fontSize: 10, background: "#1a1a0a", color: "#fde68a", padding: "2px 6px", borderRadius: 4, fontWeight: 600 }}>
+              <span style={stageTagStyle}>
                 Band Assignment
               </span>
             </div>
-            <span style={{ color: "#6b7280", fontSize: 12, transition: "transform 0.2s", transform: expandedSections.priority ? "rotate(180deg)" : "rotate(0deg)" }}>
+            <span style={{ color: "#9ca3af", fontSize: 12, transition: "transform 0.2s", transform: expandedSections.priority ? "rotate(180deg)" : "rotate(0deg)" }}>
               ▼
             </span>
           </button>
@@ -500,8 +531,8 @@ export default function RiskConfiguration() {
                         gap: 12,
                         padding: "8px 10px",
                         background: c.bg,
-                        borderRadius: 6,
-                        border: `1px solid ${c.border}33`,
+                        borderRadius: 8,
+                        border: `1px solid ${c.border}`,
                       }}
                     >
                       <div style={{ display: "flex", alignItems: "center", gap: 6, width: 60 }}>
@@ -541,33 +572,21 @@ export default function RiskConfiguration() {
           )}
         </div>
 
-        <Divider />
-
         {/* ── Severity Points (BTS Stage) ── */}
-        <div style={{ borderBottom: "1px solid #1f2937" }}>
+        <div style={sectionCardStyle}>
           <button
             onClick={() => toggleSection("severity")}
-            style={{
-              width: "100%",
-              padding: "14px 16px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              color: "#e5e7eb",
-            }}
+            style={sectionButtonStyle}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontWeight: 600, fontSize: 13 }}>
+              <span style={{ fontWeight: 600, fontSize: 13, color: "#1a1a2a" }}>
                 Severity Points
               </span>
-              <span style={{ fontSize: 10, background: "#0a2d1a", color: "#86efac", padding: "2px 6px", borderRadius: 4, fontWeight: 600 }}>
+              <span style={stageTagStyle}>
                 BTS Stage
               </span>
             </div>
-            <span style={{ color: "#6b7280", fontSize: 12, transition: "transform 0.2s", transform: expandedSections.severity ? "rotate(180deg)" : "rotate(0deg)" }}>
+            <span style={{ color: "#9ca3af", fontSize: 12, transition: "transform 0.2s", transform: expandedSections.severity ? "rotate(180deg)" : "rotate(0deg)" }}>
               ▼
             </span>
           </button>
@@ -586,13 +605,12 @@ export default function RiskConfiguration() {
                       alignItems: "center",
                       justifyContent: "space-between",
                       padding: "8px 10px",
-                      background: "#111827",
-                      borderRadius: 6,
+                      ...rowStyle,
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <span style={{ width: 8, height: 8, borderRadius: "50%", background: SEVERITY_COLORS[level] || "#6b7280" }} />
-                      <span style={{ fontSize: 12, fontWeight: 500, color: "#d1d5db", textTransform: "capitalize" }}>
+                      <span style={{ fontSize: 12, fontWeight: 500, color: "#1a1a2a", textTransform: "capitalize" }}>
                         {level}
                       </span>
                     </div>
@@ -611,33 +629,21 @@ export default function RiskConfiguration() {
           )}
         </div>
 
-        <Divider />
-
         {/* ── File Risk Thresholds (FARS Stage) ── */}
-        <div style={{ borderBottom: "1px solid #1f2937" }}>
+        <div style={sectionCardStyle}>
           <button
             onClick={() => toggleSection("fileRisk")}
-            style={{
-              width: "100%",
-              padding: "14px 16px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              color: "#e5e7eb",
-            }}
+            style={sectionButtonStyle}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontWeight: 600, fontSize: 13 }}>
+              <span style={{ fontWeight: 600, fontSize: 13, color: "#1a1a2a" }}>
                 File Risk Thresholds
               </span>
-              <span style={{ fontSize: 10, background: "#2d0a1a", color: "#fda4af", padding: "2px 6px", borderRadius: 4, fontWeight: 600 }}>
+              <span style={stageTagStyle}>
                 FARS Stage
               </span>
             </div>
-            <span style={{ color: "#6b7280", fontSize: 12, transition: "transform 0.2s", transform: expandedSections.fileRisk ? "rotate(180deg)" : "rotate(0deg)" }}>
+            <span style={{ color: "#9ca3af", fontSize: 12, transition: "transform 0.2s", transform: expandedSections.fileRisk ? "rotate(180deg)" : "rotate(0deg)" }}>
               ▼
             </span>
           </button>
@@ -656,13 +662,12 @@ export default function RiskConfiguration() {
                       alignItems: "center",
                       justifyContent: "space-between",
                       padding: "8px 10px",
-                      background: "#111827",
-                      borderRadius: 6,
+                      ...rowStyle,
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: SEVERITY_COLORS[level] || "#6b7280" }} />
-                      <span style={{ fontSize: 12, fontWeight: 500, color: "#d1d5db", textTransform: "capitalize" }}>
+                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: SEVERITY_COLORS[level] || "#9ca3af" }} />
+                      <span style={{ fontSize: 12, fontWeight: 500, color: "#1a1a2a", textTransform: "capitalize" }}>
                         {level}
                       </span>
                     </div>
@@ -683,11 +688,9 @@ export default function RiskConfiguration() {
           )}
         </div>
 
-        <Divider />
-
         {/* ── Pipeline Preview ── */}
         <div style={{ padding: "16px" }}>
-          <p style={{ fontSize: 11, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 10 }}>
+          <p style={{ fontSize: 11, fontWeight: 600, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 10 }}>
             Pipeline Preview — sample CRITICAL finding
           </p>
           {(() => {
@@ -708,9 +711,19 @@ export default function RiskConfiguration() {
             const bc = BAND_COLORS[band];
 
             return (
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "12px", background: "#0f172a", borderRadius: 8, border: "1px solid #1e293b" }}>
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+                padding: "12px",
+                background: "rgba(255, 255, 255, 0.5)",
+                backdropFilter: "blur(12px)",
+                borderRadius: 10,
+                border: "1px solid rgba(0,0,0,0.08)",
+              }}>
                 {[
-                  { label: "BTS", value: bts.toFixed(1), color: "#d1d5db" },
+                  { label: "BTS", value: bts.toFixed(1), color: "#4b5563" },
                   { label: "→" },
                   { label: "CRS", value: String(crs), color: bc.text },
                   { label: "→" },
@@ -728,7 +741,7 @@ export default function RiskConfiguration() {
                       </div>
                     </div>
                   ) : (
-                    <span key={i} style={{ color: "#374151", fontSize: 14 }}>
+                    <span key={i} style={{ color: "#d1d5db", fontSize: 14 }}>
                       →
                     </span>
                   )
@@ -742,7 +755,7 @@ export default function RiskConfiguration() {
 
         {/* ── Action bar ── */}
         <div style={{ padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: 11, color: hasChanges ? "#fbbf24" : "#4b5563", fontWeight: 500 }}>
+          <span style={{ fontSize: 11, color: hasChanges ? "#b45309" : "#9ca3af", fontWeight: 500 }}>
             {hasChanges ? "⚠ Unsaved changes" : "No changes"}
           </span>
           <div style={{ display: "flex", gap: 8 }}>
@@ -752,9 +765,9 @@ export default function RiskConfiguration() {
               style={{
                 padding: "8px 16px",
                 borderRadius: 6,
-                border: "1px solid #374151",
-                background: "transparent",
-                color: hasChanges ? "#d1d5db" : "#4b5563",
+                border: "1px solid rgba(0,0,0,0.12)",
+                background: "rgba(255,255,255,0.6)",
+                color: hasChanges ? "#1a1a2a" : "#9ca3af",
                 fontSize: 12,
                 fontWeight: 500,
                 cursor: hasChanges ? "pointer" : "default",
@@ -767,8 +780,8 @@ export default function RiskConfiguration() {
                 padding: "8px 16px",
                 borderRadius: 6,
                 border: "none",
-                background: hasChanges ? "#4f46e5" : "#1e1b4b",
-                color: hasChanges ? "#fff" : "#6366f1",
+                background: hasChanges ? NEPERIA_GREEN : "rgba(101, 183, 30, 0.2)",
+                color: hasChanges ? "#fff" : NEPERIA_GREEN_DARK,
                 fontSize: 12,
                 fontWeight: 600,
                 cursor: hasChanges ? "pointer" : "default",
