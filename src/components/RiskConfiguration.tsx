@@ -780,7 +780,7 @@ export default function RiskConfiguration() {
                 padding: "8px 16px",
                 borderRadius: 6,
                 border: "none",
-                background: hasChanges ? NEPERIA_GREEN : "rgba(101, 183, 30, 0.2)",
+                background: hasChanges ? NEPERIA_GREEN : "rgba(175, 203, 14, 0.2)",
                 color: hasChanges ? "#fff" : NEPERIA_GREEN_DARK,
                 fontSize: 12,
                 fontWeight: 600,
