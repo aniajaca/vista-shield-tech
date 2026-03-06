@@ -338,6 +338,7 @@ export default function RiskConfiguration() {
   return (
     <div
       style={{
+        position: "relative",
         background: "rgba(255, 255, 255, 0.65)",
         backdropFilter: "blur(20px) saturate(180%)",
         WebkitBackdropFilter: "blur(20px) saturate(180%)",
@@ -345,8 +346,41 @@ export default function RiskConfiguration() {
         boxShadow: "0 8px 32px rgba(0, 0, 0, 0.08)",
         color: "#1a1a2a",
         minHeight: "100%",
+        overflow: "hidden",
       }}
     >
+      {/* Animated shimmer edge effect */}
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          pointerEvents: "none",
+          zIndex: 0,
+          background: "linear-gradient(135deg, rgba(175,203,14,0.08) 0%, transparent 40%, transparent 60%, rgba(175,203,14,0.06) 100%)",
+          borderRadius: "inherit",
+        }}
+      />
+      <div
+        className="animate-shimmer-edge"
+        style={{
+          position: "absolute",
+          top: -1,
+          left: -1,
+          right: -1,
+          bottom: -1,
+          pointerEvents: "none",
+          zIndex: 0,
+          borderRadius: "inherit",
+          border: "1px solid transparent",
+          mask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
+          maskComposite: "exclude",
+          WebkitMaskComposite: "xor",
+          padding: 1,
+        }}
+      />
       <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
         rel="stylesheet"
