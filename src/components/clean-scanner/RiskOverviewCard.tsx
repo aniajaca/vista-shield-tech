@@ -19,134 +19,124 @@ interface RiskOverviewCardProps {
 
 const RiskScoreIndicator = ({ score = 0, level = 'None' }) => (
     <div className="text-center">
-        <p className="text-[72px] font-semibold tracking-[-0.04em] text-[#374151] tabular-nums">
+        <p className="text-[64px] font-semibold tracking-[-0.04em] text-foreground tabular-nums leading-none">
             {score.toFixed(0)}
         </p>
-        <p className="text-sm font-medium text-[#6B7280] mt-2">{level} Risk</p>
+        <p className="text-xs font-medium text-muted-foreground mt-1.5">{level} Risk</p>
     </div>
 );
 
-const SeverityPill = ({ severity, count }) => {
+const SeverityPill = ({ severity, count }: { severity: string; count: number }) => {
     const s = severity?.toLowerCase();
-    const styles = {
-        critical: 'bg-[#FEE2E2] text-[#DC2626]',
-        high: 'bg-[#FED7AA] text-[#EA580C]', 
-        medium: 'bg-[#FEF3C7] text-[#D97706]',
-        low: 'bg-[#DBEAFE] text-[#2563EB]',
+    const styles: Record<string, string> = {
+        critical: 'bg-[hsl(var(--critical)/0.12)] text-[hsl(var(--critical))]',
+        high: 'bg-[hsl(var(--high)/0.12)] text-[hsl(var(--high))]',
+        medium: 'bg-[hsl(var(--medium)/0.15)] text-[hsl(43,74%,46%)]',
+        low: 'bg-[hsl(var(--low)/0.12)] text-[hsl(var(--low))]',
     };
-    
     return (
-        <div className={`flex items-center justify-between text-sm rounded-full ${styles[s] || 'bg-gray-100 text-gray-600'}`}>
-            <span className="px-3 py-1 font-medium text-xs">{severity}</span>
-            <span className="tabular-nums font-semibold pr-3">{count}</span>
+        <div className={`flex items-center justify-between text-xs rounded-full ${styles[s] || 'bg-muted text-muted-foreground'}`}>
+            <span className="px-2.5 py-0.5 font-medium">{severity}</span>
+            <span className="tabular-nums font-semibold pr-2.5">{count}</span>
         </div>
     );
 };
 
-// Fix 4: Priority band pill
-const PriorityPill = ({ priority, count }) => {
-    const styles = {
-        'P0': 'bg-red-100 text-red-700',
-        'P1': 'bg-orange-100 text-orange-700',
-        'P2': 'bg-yellow-100 text-yellow-700',
-        'P3': 'bg-blue-100 text-blue-600',
+const PriorityPill = ({ priority, count }: { priority: string; count: number }) => {
+    const styles: Record<string, string> = {
+        'P0': 'bg-[hsl(var(--critical)/0.12)] text-[hsl(var(--critical))]',
+        'P1': 'bg-[hsl(var(--high)/0.12)] text-[hsl(var(--high))]',
+        'P2': 'bg-[hsl(var(--medium)/0.15)] text-[hsl(43,74%,46%)]',
+        'P3': 'bg-[hsl(var(--info)/0.12)] text-[hsl(var(--info))]',
     };
-    
     return (
-        <div className={`flex items-center justify-between text-sm rounded-full ${styles[priority] || 'bg-gray-100 text-gray-600'}`}>
-            <span className="px-3 py-1 font-medium text-xs">{priority}</span>
-            <span className="tabular-nums font-semibold pr-3">{count}</span>
+        <div className={`flex items-center justify-between text-xs rounded-full ${styles[priority] || 'bg-muted text-muted-foreground'}`}>
+            <span className="px-2.5 py-0.5 font-medium">{priority}</span>
+            <span className="tabular-nums font-semibold pr-2.5">{count}</span>
         </div>
     );
 };
 
-const Metric = ({ label, value }) => (
-    <div className="flex justify-between items-baseline py-2">
-        <span className="text-sm text-[#6B7280]">{label}</span>
-        <span className="text-sm font-medium text-[#374151] tabular-nums">{value}</span>
-    </div>
-);
+// Normalize severity using adjustedSeverity with fallback
+function normSev(f: any): string {
+    const raw = f?.adjustedSeverity || f?.severity || 'Low';
+    const s = String(raw).toLowerCase();
+    if (['critical', 'crit', 'error', 'severe'].includes(s)) return 'Critical';
+    if (['high', 'major'].includes(s)) return 'High';
+    if (['medium', 'moderate', 'warn', 'warning'].includes(s)) return 'Medium';
+    return 'Low';
+}
 
 export default function RiskOverviewCard({ riskAssessment = {}, metadata, performance = {}, findings = [] }: RiskOverviewCardProps) {
-    const { riskScore, findingsBreakdown = {} } = riskAssessment;
-    
-    const finalScore = riskScore || metadata?.risk?.final || metadata?.score?.final || 0;
-    
+    const finalScore = riskAssessment.riskScore || metadata?.risk?.final || metadata?.score?.final || 0;
+
+    // Compute severity breakdown from findings using adjustedSeverity
+    const sevCounts: Record<string, number> = { Critical: 0, High: 0, Medium: 0, Low: 0 };
+    findings.forEach(f => { sevCounts[normSev(f)]++; });
+    const totalVulns = findings.length;
+
     const severityOrder = ['Critical', 'High', 'Medium', 'Low'];
-    const finalLevel = severityOrder.find(s => (findingsBreakdown[s] || 0) > 0) || 'Low';
-    
-    const totalVulns = Object.values(findingsBreakdown).reduce((a, b) => (typeof b === 'number' ? a + b : a), 0);
-    
-    // Fix 4: Compute priority band counts from findings
+    const finalLevel = severityOrder.find(s => sevCounts[s] > 0) || 'Low';
+
+    // Priority band counts
     const priorityCounts: Record<string, number> = {};
     findings.forEach(f => {
         const p = f.priority?.priority;
-        if (p) {
-            priorityCounts[p] = (priorityCounts[p] || 0) + 1;
-        }
+        if (p) priorityCounts[p] = (priorityCounts[p] || 0) + 1;
     });
     const priorityOrder = ['P0', 'P1', 'P2', 'P3'];
     const hasPriorities = Object.keys(priorityCounts).length > 0;
-    
-    const { scanTime } = performance;
-    
+
     const engineRaw = metadata?.engine || metadata?.scanner || metadata?.tool;
     const engineStr = typeof engineRaw === 'string' ? engineRaw.toLowerCase() : (engineRaw?.name?.toLowerCase?.());
     const engineDisplay = engineStr?.includes('semgrep') ? 'Semgrep' : engineStr?.includes('ast') ? 'AST Scanner' : (engineRaw || 'Semgrep');
-    const rawScanTime = metadata?.scan_time || (typeof scanTime === 'number' && scanTime > 0 ? `${scanTime.toFixed(2)}s` : null);
+    const rawScanTime = metadata?.scan_time || (typeof performance.scanTime === 'number' && performance.scanTime > 0 ? `${performance.scanTime.toFixed(2)}s` : null);
     const scanTimeDisplay = rawScanTime || '< 1s';
-    
+
     return (
-        <div className="glass-panel rounded-xl p-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-8 items-center">
-                <div className="md:col-span-1 flex items-center justify-center">
+        <div className="glass-panel rounded-xl p-5">
+            <div className="flex items-center gap-6">
+                {/* Risk Score */}
+                <div className="flex-shrink-0 flex items-center justify-center w-24">
                     <RiskScoreIndicator score={finalScore} level={finalLevel} />
                 </div>
-                
-                {/* Fix 4: Priority breakdown as primary */}
-                {hasPriorities && (
-                    <div className="md:col-span-1 space-y-4">
-                        <h3 className="text-xs font-medium uppercase text-[#6B7280] tracking-wider">Priority Breakdown</h3>
-                        <div className="flex flex-col gap-2">
-                            {priorityOrder.map(p => (
-                                (priorityCounts[p] || 0) > 0 && <PriorityPill key={p} priority={p} count={priorityCounts[p]} />
-                            ))}
+
+                {/* Priority + Severity breakdowns side by side */}
+                <div className="flex gap-6 flex-1 min-w-0">
+                    {hasPriorities && (
+                        <div className="space-y-1.5 min-w-[120px]">
+                            <h3 className="text-[10px] font-medium uppercase text-muted-foreground tracking-wider">Priority</h3>
+                            <div className="flex flex-col gap-1">
+                                {priorityOrder.map(p => (
+                                    (priorityCounts[p] || 0) > 0 && <PriorityPill key={p} priority={p} count={priorityCounts[p]} />
+                                ))}
+                            </div>
                         </div>
-                    </div>
-                )}
-                
-                <div className="md:col-span-1 space-y-4">
-                     {totalVulns > 0 && (
-                         <>
-                             <h3 className="text-xs font-medium uppercase text-[#6B7280] tracking-wider">Severity Breakdown</h3>
-                             <div className="flex flex-col gap-2">
-                                 {Object.entries(findingsBreakdown).map(([sev, count]) => (
-                                    count > 0 && <SeverityPill key={sev} severity={sev} count={count} />
-                                 ))}
-                             </div>
-                         </>
-                     )}
+                    )}
+
+                    {totalVulns > 0 && (
+                        <div className="space-y-1.5 min-w-[120px]">
+                            <h3 className="text-[10px] font-medium uppercase text-muted-foreground tracking-wider">Severity</h3>
+                            <div className="flex flex-col gap-1">
+                                {severityOrder.map(sev => (
+                                    sevCounts[sev] > 0 && <SeverityPill key={sev} severity={sev} count={sevCounts[sev]} />
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
-                
-                <div className="md:col-span-1 space-y-2">
-                    <h3 className="text-xs font-medium uppercase text-[#6B7280] tracking-wider mb-2">Analysis Metrics</h3>
-                    <Metric 
-                        label="Scan Time" 
-                        value={scanTimeDisplay}
-                    />
-                    <Metric 
-                        label="Engine Used" 
-                        value={engineDisplay}
-                    />
-                    {/* Fix 3: Active profile indicator */}
-                    <Metric 
-                        label="Risk Profile" 
-                        value={
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[#F3F4F6] text-[#374151]">
-                                Default
-                            </span>
-                        }
-                    />
+
+                {/* Compact metrics row */}
+                <div className="flex-shrink-0 flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-muted text-muted-foreground">
+                        ⏱ {scanTimeDisplay}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-muted text-muted-foreground">
+                        ⚙ {engineDisplay}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-muted text-muted-foreground">
+                        Profile: Default
+                    </span>
                 </div>
             </div>
         </div>
