@@ -70,7 +70,7 @@ export default function RiskOverviewCard({ riskAssessment = {}, metadata, perfor
     const scanTimeDisplay = rawScanTime || '< 1s';
     
     return (
-        <div className="bg-white p-6 rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
+        <div className="glass-panel rounded-xl p-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
                 <div className="md:col-span-1 flex items-center justify-center">
                     <RiskScoreIndicator score={finalScore} level={finalLevel} />

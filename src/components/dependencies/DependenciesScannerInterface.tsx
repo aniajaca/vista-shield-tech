@@ -163,8 +163,8 @@ export default function DependenciesScannerInterface({ onScan, isLoading }: Depe
                     <div
                         className={`group relative rounded-xl p-8 text-center cursor-pointer transition-all duration-200 ${
                             isDragging 
-                                ? 'border-2 border-[#AFCB0E] bg-[#FAFAF8]' 
-                                : `border ${error ? 'border-red-300 bg-red-50' : 'border-[#F3F4F6] bg-white hover:border-[#E2E8F0] hover:bg-[#FAFAFA]'}`
+                                ? 'border-2 border-[#AFCB0E] bg-[rgba(175,203,14,0.06)]' 
+                                : `border ${error ? 'border-red-300 bg-red-50/60' : 'border-white/40 bg-white/30 hover:border-white/60 hover:bg-white/50'}`
                         }`}
                         onDragOver={onDragOver}
                         onDragLeave={onDragLeave}
@@ -215,7 +215,7 @@ export default function DependenciesScannerInterface({ onScan, isLoading }: Depe
     };
 
     return (
-        <div className="bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05)] p-6 space-y-6">
+        <div className="glass-panel rounded-xl p-6 space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <FileUploadArea type="packageJson" required />
                 <FileUploadArea type="packageLock" />

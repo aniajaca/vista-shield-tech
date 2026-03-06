@@ -69,10 +69,10 @@ const VulnerabilityItem = ({ vulnerability }) => {
     const displayTitle = `${packageName || 'Unknown'}@${currentVersion || 'unknown'} — ${title || 'Advisory'}`;
 
     return (
-        <div className={`bg-white rounded-xl transition-all duration-150 ${isOpen ? 'shadow-[0_4px_12px_rgba(0,0,0,0.08)]' : 'shadow-[0_1px_3px_rgba(0,0,0,0.05)]'}`}>
+        <div className={`glass-card rounded-xl transition-all duration-150 ${isOpen ? 'shadow-[0_4px_12px_rgba(0,0,0,0.08)]' : ''}`}>
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-full hover:bg-[#F9FAFB] px-6 py-4 transition-colors duration-150 group rounded-t-xl"
+                className="w-full hover:bg-white/40 px-6 py-4 transition-colors duration-150 group rounded-t-xl"
             >
                 <div className="flex items-center justify-between w-full text-left">
                     <div className="flex items-center gap-4">
@@ -149,7 +149,7 @@ export default function DependenciesFindingsCard({ vulnerabilities = [] }) {
 
     if (!vulnerabilities || vulnerabilities.length === 0) {
         return (
-             <div className="bg-white p-12 text-center rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
+             <div className="glass-panel p-12 text-center rounded-xl">
                 <h3 className="text-lg font-medium text-[#374151]">No Vulnerabilities Found 🎉</h3>
                 <p className="mt-2 text-[#6B7280]">All your dependencies appear to be secure.</p>
             </div>
@@ -168,7 +168,7 @@ export default function DependenciesFindingsCard({ vulnerabilities = [] }) {
             {/* Summary Stats */}
             <div className="grid grid-cols-4 gap-4">
                 {['critical', 'high', 'medium', 'low'].map(severity => (
-                    <div key={severity} className="bg-white p-4 rounded-lg shadow-[0_1px_3px_rgba(0,0,0,0.05)] text-center">
+                    <div key={severity} className="glass-card p-4 rounded-lg text-center">
                         <div className="text-2xl font-bold text-[#374151] tabular-nums">
                             {severityCounts[severity] || 0}
                         </div>
