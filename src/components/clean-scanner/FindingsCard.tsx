@@ -124,10 +124,10 @@ const FindingItem = ({ finding }) => {
     const cweName = typeof cwe === 'object' ? cwe?.name : null;
 
     return (
-        <div className={`bg-white rounded-xl transition-all duration-150 ${isOpen ? 'shadow-[0_4px_12px_rgba(0,0,0,0.08)]' : 'shadow-[0_1px_3px_rgba(0,0,0,0.05)]'}`}>
+        <div className={`glass-card rounded-xl transition-all duration-150 ${isOpen ? 'shadow-[0_4px_12px_rgba(0,0,0,0.08)]' : ''}`}>
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-full hover:bg-[#F9FAFB] px-6 py-4 transition-colors duration-150 group rounded-t-xl"
+                className="w-full hover:bg-white/40 px-6 py-4 transition-colors duration-150 group rounded-t-xl"
             >
                 <div className="flex items-center justify-between w-full text-left">
                     <div className="flex items-center gap-4">

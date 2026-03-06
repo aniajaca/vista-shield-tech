@@ -45,12 +45,12 @@ export default function ScannerInterface({ onScan, isLoading }) {
     };
 
     return (
-        <div className="bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05)] p-6">
+        <div className="glass-panel rounded-xl p-6">
             <div
                 className={`group relative rounded-xl p-12 text-center cursor-pointer transition-all duration-200 ${
                     isDragging 
-                        ? 'border-2 border-[#AFCB0E] bg-[#FAFAF8]' 
-                        : 'border border-[#F3F4F6] bg-white hover:border-[#E2E8F0] hover:bg-[#FAFAFA]'
+                        ? 'border-2 border-[#AFCB0E] bg-[rgba(175,203,14,0.06)]' 
+                        : 'border border-white/40 bg-white/30 hover:border-white/60 hover:bg-white/50'
                 }`}
                 onDragOver={onDragOver}
                 onDragLeave={onDragLeave}

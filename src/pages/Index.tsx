@@ -6,9 +6,9 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState('scanner');
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Navigation Tabs */}
-      <div className="border-b border-[#F3F4F6] bg-white">
+    <div className="min-h-screen glass-bg">
+      {/* Navigation Tabs — Frosted glass */}
+      <div className="glass-nav sticky top-0 z-40">
         <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-12">
           <nav className="flex space-x-8" aria-label="Tabs">
             <button
@@ -36,7 +36,7 @@ const Index = () => {
       </div>
 
       {/* Tab Content */}
-      <div className="bg-white">
+      <div>
         {activeTab === 'scanner' && <Dashboard />}
         {activeTab === 'dependencies' && <Dependencies />}
       </div>
