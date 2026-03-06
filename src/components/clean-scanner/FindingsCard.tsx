@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, MapPin, Lightbulb, Tag, Layers, Shield, Wrench } from 'lucide-react';
+import { ChevronDown, MapPin, Lightbulb, Tag, Layers, ArrowUp, ArrowDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -330,48 +330,81 @@ const FindingItem = ({ group, isEven }: { group: FindingGroup; isEven: boolean }
                                 </div>
                             )}
 
-                            {/* Context detected */}
-                            {inferredFactors && inferredFactors.length > 0 && (
-                                <div>
-                                    <span className="text-[10px] uppercase text-muted-foreground tracking-wider">Context Detected</span>
-                                    <TooltipProvider delayDuration={200}>
-                                        <div className="flex flex-wrap gap-1.5 mt-1">
-                                            {inferredFactors.map((factor: string) => {
-                                                const isApplied = appliedFactors?.includes(factor);
-                                                const evidence = contextEvidence?.[factor];
-                                                const conf = evidence?.confidence;
-                                                const evidenceList: string[] = evidence?.evidence || [];
-                                                const label = factor.replace(/([A-Z])/g, ' $1').trim().replace(/^./, c => c.toUpperCase());
-                                                const confidenceStr = typeof conf === 'number' ? ` (${Math.round(conf * 100)}%)` : '';
+                            {/* Context detected — amplifiers & attenuators */}
+                            {inferredFactors && inferredFactors.length > 0 && (() => {
+                                const ATTENUATING = ['hasAuthentication', 'testOrDevCode', 'internalNetwork', 'isProtected'];
+                                const amplifiers = inferredFactors.filter((f: string) => !ATTENUATING.includes(f));
+                                const attenuators = inferredFactors.filter((f: string) => ATTENUATING.includes(f));
+                                const hasBoth = amplifiers.length > 0 && attenuators.length > 0;
 
-                                                return (
-                                                    <Tooltip key={factor}>
-                                                        <TooltipTrigger asChild>
-                                                            <Badge
-                                                                variant={isApplied ? 'default' : 'outline'}
-                                                                className={isApplied
-                                                                    ? 'bg-[hsl(var(--low)/0.15)] text-[hsl(var(--low))] border-[hsl(var(--low)/0.3)] cursor-default text-[11px]'
-                                                                    : 'bg-muted text-muted-foreground border-border cursor-default line-through decoration-muted-foreground/40 text-[11px]'
-                                                                }
-                                                            >
-                                                                {label}{confidenceStr}{isApplied ? ' ✓' : ''}
-                                                            </Badge>
-                                                        </TooltipTrigger>
-                                                        <TooltipContent side="top" className="max-w-xs">
-                                                            <p className="font-medium text-xs mb-1">{isApplied ? 'Applied to risk score' : 'Detected but not applied (below threshold)'}</p>
-                                                            {evidenceList.length > 0 && (
-                                                                <ul className="text-xs space-y-0.5 list-disc pl-3 mt-1">
-                                                                    {evidenceList.map((e, i) => <li key={i} className="font-mono text-[11px]">{e}</li>)}
-                                                                </ul>
-                                                            )}
-                                                        </TooltipContent>
-                                                    </Tooltip>
-                                                );
-                                            })}
-                                        </div>
-                                    </TooltipProvider>
-                                </div>
-                            )}
+                                const renderBadge = (factor: string, isAttenuator: boolean) => {
+                                    const isApplied = appliedFactors?.includes(factor);
+                                    const evidence = contextEvidence?.[factor];
+                                    const conf = evidence?.confidence;
+                                    const evidenceList: string[] = evidence?.evidence || [];
+                                    const label = factor.replace(/([A-Z])/g, ' $1').trim().replace(/^./, c => c.toUpperCase());
+                                    const confidenceStr = typeof conf === 'number' ? ` (${Math.round(conf * 100)}%)` : '';
+
+                                    const appliedStyle = isAttenuator
+                                        ? 'bg-[hsl(var(--info)/0.12)] text-[hsl(var(--info))] border-[hsl(var(--info)/0.3)] cursor-default text-[11px]'
+                                        : 'bg-[hsl(var(--low)/0.15)] text-[hsl(var(--low))] border-[hsl(var(--low)/0.3)] cursor-default text-[11px]';
+                                    const inactiveStyle = 'bg-muted text-muted-foreground border-border cursor-default line-through decoration-muted-foreground/40 text-[11px]';
+
+                                    return (
+                                        <Tooltip key={factor}>
+                                            <TooltipTrigger asChild>
+                                                <Badge
+                                                    variant={isApplied ? 'default' : 'outline'}
+                                                    className={isApplied ? appliedStyle : inactiveStyle}
+                                                >
+                                                    {isAttenuator
+                                                        ? <ArrowDown className="w-3 h-3 mr-0.5 inline" strokeWidth={2} />
+                                                        : <ArrowUp className="w-3 h-3 mr-0.5 inline" strokeWidth={2} />
+                                                    }
+                                                    {label}{confidenceStr}{isApplied ? ' ✓' : ''}
+                                                </Badge>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="top" className="max-w-xs">
+                                                <p className="font-medium text-xs mb-1">
+                                                    {isApplied
+                                                        ? (isAttenuator ? 'Reduces risk — applied to score' : 'Increases risk — applied to score')
+                                                        : 'Detected but not applied (below threshold)'}
+                                                </p>
+                                                {evidenceList.length > 0 && (
+                                                    <ul className="text-xs space-y-0.5 list-disc pl-3 mt-1">
+                                                        {evidenceList.map((e, i) => <li key={i} className="font-mono text-[11px]">{e}</li>)}
+                                                    </ul>
+                                                )}
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    );
+                                };
+
+                                return (
+                                    <div>
+                                        <TooltipProvider delayDuration={200}>
+                                            {amplifiers.length > 0 && (
+                                                <div className="mb-2">
+                                                    {hasBoth && <span className="text-[10px] uppercase tracking-wider text-[hsl(var(--critical)/0.7)] font-medium">Risk Amplifiers</span>}
+                                                    {!hasBoth && <span className="text-[10px] uppercase text-muted-foreground tracking-wider">Context Detected</span>}
+                                                    <div className="flex flex-wrap gap-1.5 mt-1">
+                                                        {amplifiers.map((f: string) => renderBadge(f, false))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {attenuators.length > 0 && (
+                                                <div>
+                                                    {hasBoth && <span className="text-[10px] uppercase tracking-wider text-[hsl(var(--info)/0.8)] font-medium">Risk Attenuators</span>}
+                                                    {!hasBoth && <span className="text-[10px] uppercase text-muted-foreground tracking-wider">Context Detected</span>}
+                                                    <div className="flex flex-wrap gap-1.5 mt-1">
+                                                        {attenuators.map((f: string) => renderBadge(f, true))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </TooltipProvider>
+                                    </div>
+                                );
+                            })()}
 
                             {/* Risk factor adjustments */}
                             {finding.risk?.adjusted?.adjustments && (
