@@ -387,6 +387,8 @@ export default function RiskConfiguration() {
       />
       <div
         style={{
+          position: "relative",
+          zIndex: 1,
           maxWidth: 520,
           margin: "0 auto",
           fontFamily: "'Inter', sans-serif",
