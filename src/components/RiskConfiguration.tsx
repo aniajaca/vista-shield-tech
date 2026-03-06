@@ -235,7 +235,7 @@ function NumberInput({
           border: "1px solid rgba(0,0,0,0.12)",
           borderRadius: 6,
           color: "#1a1a2a",
-          fontSize: 13,
+          fontSize: 14,
           fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
           textAlign: "right",
           outline: "none",
