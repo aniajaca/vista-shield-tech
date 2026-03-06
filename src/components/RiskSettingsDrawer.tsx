@@ -23,7 +23,7 @@ export const RiskSettingsDrawer: React.FC<RiskSettingsDrawerProps> = ({ children
           </Button>
         )}
       </SheetTrigger>
-      <SheetContent className="w-[420px] sm:w-[540px] overflow-y-auto p-0 border-l border-border/30" style={{ background: 'rgba(245, 247, 250, 0.85)', backdropFilter: 'blur(24px) saturate(180%)' }}>
+      <SheetContent className="w-[420px] sm:w-[540px] overflow-y-auto p-0 border-l border-border/30 !bg-transparent" style={{ background: 'rgba(245, 247, 250, 0.55)', backdropFilter: 'blur(24px) saturate(180%)' }}>
         <RiskConfiguration />
       </SheetContent>
     </Sheet>
