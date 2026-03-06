@@ -286,9 +286,9 @@ export default function RiskConfiguration() {
     (f: any) => f.enabled
   ).length;
 
-  const maxCombinedMultiplier = Object.values(config.contextMultipliers)
-    .filter((f: any) => f.enabled)
-    .reduce((acc: number, f: any) => acc * f.value, 1)
+  const maxCombinedMultiplier = (Object.values(config.contextMultipliers) as any[])
+    .filter((f) => f.enabled)
+    .reduce((acc: number, f) => acc * f.value, 1)
     .toFixed(2);
 
   return (
