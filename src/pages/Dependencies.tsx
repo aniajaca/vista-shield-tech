@@ -114,7 +114,7 @@ export default function Dependencies() {
     const hasResults = scanResult && !isLoading;
 
     return (
-        <div className="text-[#374151]">
+        <div className="text-foreground">
             <style>{`
                 @import url('https://rsms.me/inter/inter.css');
                 html { font-family: 'Inter', sans-serif; }
