@@ -170,7 +170,8 @@ export default function Dashboard() {
                                     findingsBreakdown: scanResult.riskAssessment?.findingsBreakdown || scanResult.stats
                                 }} 
                                 performance={scanResult.performance} 
-                                metadata={scanResult.metadata} 
+                                metadata={scanResult.metadata}
+                                findings={scanResult.findings || []}
                             />
                             <FindingsCard findings={scanResult.findings || []} />
                             <ExportSection 
