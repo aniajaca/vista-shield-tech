@@ -101,3 +101,20 @@
   }
 }
 
+/* Shimmer edge animation for glassmorphism panels */
+@keyframes shimmer-edge {
+  0% {
+    background: linear-gradient(135deg, rgba(175,203,14,0.3) 0%, transparent 30%, transparent 70%, rgba(175,203,14,0) 100%);
+  }
+  50% {
+    background: linear-gradient(135deg, rgba(175,203,14,0) 0%, transparent 30%, transparent 70%, rgba(175,203,14,0.3) 100%);
+  }
+  100% {
+    background: linear-gradient(135deg, rgba(175,203,14,0.3) 0%, transparent 30%, transparent 70%, rgba(175,203,14,0) 100%);
+  }
+}
+
+.animate-shimmer-edge {
+  animation: shimmer-edge 4s ease-in-out infinite;
+}
+
