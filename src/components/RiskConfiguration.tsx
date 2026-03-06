@@ -208,7 +208,7 @@ function NumberInput({
   min = 0,
   max = 100,
   step = 1,
-  width = 64,
+  width = 72,
   suffix,
 }: {
   value: number;
