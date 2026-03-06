@@ -15,13 +15,20 @@ interface ExportSectionProps {
 function getCweInfo(cwe: any) {
   const id = typeof cwe === 'string' ? cwe : cwe?.id || 'N/A';
   const rawName = typeof cwe === 'object' ? cwe?.name || '' : '';
-  // #4: Never display "CWE #352" style fallbacks
   const name = rawName && !/^CWE[\s#-]*\d+$/i.test(rawName) ? rawName : '';
   return { id, name };
 }
 
 function getOwaspDisplay(owasp: any): string {
-  if (Array.isArray(owasp) && owasp.length > 0) return owasp[0];
+  if (Array.isArray(owasp) && owasp.length > 0) {
+    // Fix 7: Show all OWASP entries sorted by year desc
+    const sorted = [...owasp].sort((a, b) => {
+      const yearA = a.match?.(/:(\d{4})/)?.[1] || '0';
+      const yearB = b.match?.(/:(\d{4})/)?.[1] || '0';
+      return parseInt(yearB) - parseInt(yearA);
+    });
+    return sorted.join(', ');
+  }
   if (owasp?.category) return owasp.category;
   return '';
 }
@@ -30,7 +37,6 @@ function escapeHtml(str: string): string {
   return str.replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-// #5: Clean raw Semgrep rule titles
 function cleanTitle(raw: string): string {
   if (!raw) return 'Security Vulnerability';
   return raw
@@ -42,7 +48,6 @@ function cleanTitle(raw: string): string {
     .trim() || 'Security Vulnerability';
 }
 
-// #1: Derive risk label from highest severity finding
 function deriveRiskLevel(findings: any[]): string {
   const normSev = (sev: any) => {
     if (!sev) return 'Low';
@@ -53,18 +58,98 @@ function deriveRiskLevel(findings: any[]): string {
     return 'Low';
   };
   const order: Array<'Critical' | 'High' | 'Medium' | 'Low'> = ['Critical', 'High', 'Medium', 'Low'];
-  const severities = new Set(findings.map(f => normSev(f?.severity)));
+  const severities = new Set(findings.map(f => normSev(f?.adjustedSeverity || f?.severity)));
   return order.find(s => severities.has(s)) || 'Low';
 }
 
+// Fix 5: Generate SARIF 2.1.0 output
+function generateSarif(findings: any[], riskAssessment: any): object {
+  const rules: Record<string, any> = {};
+  const results: any[] = [];
+
+  findings.forEach((f, i) => {
+    const ruleId = f.ruleId || `neperia-finding-${i}`;
+    if (!rules[ruleId]) {
+      const cweInfo = getCweInfo(f.cwe);
+      rules[ruleId] = {
+        id: ruleId,
+        name: cleanTitle(f.title || f.message || ''),
+        shortDescription: { text: cleanTitle(f.title || f.message || '') },
+        fullDescription: { text: f.message || f.description || 'Security vulnerability detected' },
+        helpUri: f.cwe?.id ? `https://cwe.mitre.org/data/definitions/${f.cwe.id.replace('CWE-', '')}.html` : undefined,
+        properties: {
+          tags: [
+            ...(f.cwe?.id ? [f.cwe.id] : []),
+            ...(Array.isArray(f.owasp) ? f.owasp : []),
+          ],
+          ...(f.bts !== undefined ? { 'neperia/bts': f.bts } : {}),
+          ...(f.crs !== undefined ? { 'neperia/crs': f.crs } : {}),
+          ...(f.priority?.priority ? { 'neperia/priority': f.priority.priority } : {}),
+        }
+      };
+    }
+
+    const loc = f.location || {};
+    results.push({
+      ruleId,
+      level: (f.adjustedSeverity || f.severity || 'warning').toLowerCase() === 'critical' ? 'error'
+        : (f.adjustedSeverity || f.severity || '').toLowerCase() === 'high' ? 'error'
+        : (f.adjustedSeverity || f.severity || '').toLowerCase() === 'medium' ? 'warning'
+        : 'note',
+      message: { text: f.message || f.description || 'Security vulnerability detected' },
+      locations: [{
+        physicalLocation: {
+          artifactLocation: { uri: loc.file || f.file || 'unknown' },
+          region: {
+            startLine: loc.line || f.startLine || 1,
+            ...(loc.endLine ? { endLine: loc.endLine } : {}),
+            ...(loc.column ? { startColumn: loc.column } : {}),
+            ...(loc.endColumn ? { endColumn: loc.endColumn } : {}),
+          }
+        }
+      }],
+      properties: {
+        severity: f.adjustedSeverity || f.severity,
+        ...(f.bts !== undefined ? { 'neperia/bts': f.bts } : {}),
+        ...(f.crs !== undefined ? { 'neperia/crs': f.crs } : {}),
+        ...(f.priority ? { 'neperia/priority': f.priority.priority, 'neperia/sla': f.priority.sla } : {}),
+        ...(f.confidence ? { confidence: f.confidence } : {}),
+        ...(f.impact ? { impact: f.impact } : {}),
+        ...(f.likelihood ? { likelihood: f.likelihood } : {}),
+      }
+    });
+  });
+
+  return {
+    $schema: 'https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json',
+    version: '2.1.0',
+    runs: [{
+      tool: {
+        driver: {
+          name: 'Neperia Code Guardian',
+          version: '1.0.0',
+          informationUri: 'https://neperia.com',
+          rules: Object.values(rules),
+        }
+      },
+      results,
+      properties: {
+        'neperia/riskScore': riskAssessment.riskScore || 0,
+        'neperia/riskLevel': riskAssessment.riskLevel || 'Low',
+      }
+    }]
+  };
+}
+
 function renderFindingHtml(finding: any, index: number): string {
-  const { severity = 'Medium', title, message, description, cwe, owasp, location, code, snippet, remediation } = finding;
+  const { title, message, description, cwe, owasp, location, code, snippet, remediation } = finding;
+  // Fix 2: Use adjustedSeverity
+  const severity = finding.adjustedSeverity || finding.severity || 'Medium';
   const { file, line } = location || {};
   const vulnCode = code || snippet || '';
   const { id: cweId, name: cweName } = getCweInfo(cwe);
   const owaspText = getOwaspDisplay(owasp);
 
-  // #7: Prefer finding.message over remediation.description
   let remText = message || '';
   if (!remText) {
     if (typeof remediation === 'object') {
@@ -74,10 +159,9 @@ function renderFindingHtml(finding: any, index: number): string {
     }
   }
 
-  // #5: Clean title
   const displayTitle = cleanTitle(title || message || '');
+  const displaySev = severity.charAt(0).toUpperCase() + severity.slice(1).toLowerCase();
 
-  // #6: Capitalize security category
   let categoryHtml = '';
   if (remediation?.resources?.category) {
     let cat = remediation.resources.category;
@@ -89,7 +173,7 @@ function renderFindingHtml(finding: any, index: number): string {
   let html = '<div class="finding">';
   html += '<div style="display:flex; justify-content:space-between; align-items:flex-start;">';
   html += '<h3>' + (index + 1) + '. ' + displayTitle + '</h3>';
-  html += '<span class="pill pill-' + severity.toLowerCase() + '">' + severity + '</span>';
+  html += '<span class="pill pill-' + displaySev.toLowerCase() + '">' + displaySev + '</span>';
   html += '</div>';
   html += '<div style="font-size: 12px; color: #6B7280; font-family: \'Monaco\', monospace; margin-top: 4px;">' + (file || 'N/A') + ':' + (line || 'N/A') + '</div>';
   html += '<p style="margin-top: 16px;">' + (description || message) + '</p>';
@@ -118,7 +202,6 @@ function renderFindingHtml(finding: any, index: number): string {
   if (finding.priority?.priority) {
     html += '<div><strong>Priority:</strong> ' + finding.priority.priority + ' — ' + finding.priority.action + '</div>';
   }
-  // #2: SLA from finding.priority.sla
   if (finding.priority?.sla) {
     html += '<div><strong>SLA:</strong> ' + finding.priority.sla + '</div>';
   }
@@ -129,7 +212,6 @@ function renderFindingHtml(finding: any, index: number): string {
 
 export default function ExportSection({ findings = [], riskAssessment = {}, performance = {}, metadata = {} }: ExportSectionProps) {
   const { riskScore = 0 } = riskAssessment;
-  // #1: Derive risk level from highest severity finding
   const riskLevel = deriveRiskLevel(findings);
   const currentYear = new Date().getFullYear();
 
@@ -167,31 +249,39 @@ export default function ExportSection({ findings = [], riskAssessment = {}, perf
     };
 
     const sevCount = (level: 'Critical' | 'High' | 'Medium' | 'Low') =>
-      findings.filter((f) => normalizeSeverity(f?.severity) === level).length;
+      findings.filter((f) => normalizeSeverity(f?.adjustedSeverity || f?.severity) === level).length;
+
+    // Fix 5: SARIF export
+    if (format === 'sarif') {
+      const sarif = generateSarif(findings, { riskScore, riskLevel });
+      const blob = new Blob([JSON.stringify(sarif, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `neperia-report-${new Date().toISOString().split('T')[0]}.sarif.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      return;
+    }
 
     if (format === 'json') {
-        // #1: Use derived risk level; #2: Map SLA; #3: Remove timeline; #4/#5/#6/#7: Clean findings
         const cleanedFindings = findings.map(f => {
           const cleaned = { ...f };
-          // #5: Clean title
           cleaned.title = cleanTitle(f.title || f.message || '');
-          // #2: SLA from priority.sla
           cleaned.sla = f.priority?.sla || undefined;
-          // #3: Remove timeline from remediation
           if (cleaned.remediation && typeof cleaned.remediation === 'object') {
             const { timeline, ...restRem } = cleaned.remediation;
-            // #6: Capitalize category
             if (restRem.resources?.category) {
               let cat = restRem.resources.category;
               cat = cat.replace(/^./, (c: string) => c.toUpperCase());
               if (/^unknown$/i.test(cat)) cat = 'Unclassified';
               restRem.resources = { ...restRem.resources, category: cat };
             }
-            // #7: Prefer message over description
             if (f.message) restRem.description = f.message;
             cleaned.remediation = restRem;
           }
-          // #4: Clean CWE name
           if (cleaned.cwe && typeof cleaned.cwe === 'object' && cleaned.cwe.name) {
             if (/^CWE[\s#-]*\d+$/i.test(cleaned.cwe.name)) {
               cleaned.cwe = { ...cleaned.cwe, name: undefined };
@@ -290,7 +380,7 @@ export default function ExportSection({ findings = [], riskAssessment = {}, perf
   return (
     <div>
       <h3 className="text-sm font-medium uppercase tracking-wider text-[#6B7280] mb-4">Export Report</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
             <button onClick={() => downloadReport('pdf')} className="w-full text-left p-4 rounded-xl transition-all duration-150 glass-card glass-card-hover">
                 <h4 className="font-semibold text-[#374151]">Executive Report</h4>
                 <p className="text-xs text-[#9CA3AF]">High-level summary for management (HTML format).</p>
@@ -302,6 +392,11 @@ export default function ExportSection({ findings = [], riskAssessment = {}, perf
             <button onClick={() => downloadReport('json')} className="w-full text-left p-4 rounded-xl transition-all duration-150 glass-card glass-card-hover">
                 <h4 className="font-semibold text-[#374151]">JSON Data</h4>
                 <p className="text-xs text-[#9CA3AF]">Raw data for automation and BI.</p>
+            </button>
+            {/* Fix 5: SARIF export */}
+            <button onClick={() => downloadReport('sarif')} className="w-full text-left p-4 rounded-xl transition-all duration-150 glass-card glass-card-hover">
+                <h4 className="font-semibold text-[#374151]">SARIF 2.1.0</h4>
+                <p className="text-xs text-[#9CA3AF]">Standard format for CI/CD and SIEM integration.</p>
             </button>
         </div>
     </div>
