@@ -444,7 +444,7 @@ export default function RiskConfiguration() {
                   min={0}
                   max={1}
                   step={0.05}
-                  width={56}
+                  width={68}
                 />
               </div>
 
@@ -478,7 +478,7 @@ export default function RiskConfiguration() {
                         min={1.0}
                         max={3.0}
                         step={0.1}
-                        width={52}
+                        width={68}
                         suffix="×"
                       />
                       <Toggle
@@ -549,7 +549,7 @@ export default function RiskConfiguration() {
                           onChange={(v) => updateConfig(`priorityBands.${band}`, v)}
                           min={0}
                           max={100}
-                          width={52}
+                          width={68}
                         />
                       </div>
 
@@ -560,7 +560,7 @@ export default function RiskConfiguration() {
                           onChange={(v) => updateConfig(`slaMapping.${band}`, v)}
                           min={1}
                           max={365}
-                          width={52}
+                          width={68}
                           suffix="d"
                         />
                       </div>
@@ -619,7 +619,7 @@ export default function RiskConfiguration() {
                       onChange={(v) => updateConfig(`severityPoints.${level}`, v)}
                       min={0}
                       max={50}
-                      width={52}
+                      width={68}
                       suffix="pts"
                     />
                   </div>
@@ -678,7 +678,7 @@ export default function RiskConfiguration() {
                         onChange={(v) => updateConfig(`fileRiskThresholds.${level}`, v)}
                         min={0}
                         max={100}
-                        width={52}
+                        width={68}
                       />
                     </div>
                   </div>
